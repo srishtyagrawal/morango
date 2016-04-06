@@ -30,7 +30,7 @@ class Node:
 	def updateSyncDS (self, change, filter) :
 		if self.syncDataStructure.has_key(filter) :
 			temp = self.syncDataStructure[filter]
-			for key,value in changes.items() :
+			for key,value in change.items() :
 				if temp.has_key(key) :
 					temp[key] = value	
 				else :
@@ -47,8 +47,9 @@ class Node:
 		"""
 		changes = {}
 		for key,value in fsic1.items() :
-			if fsic2.has_key(key) and fsic2[key] < fsic1[key]:
-				changes[key] = fsic1[key]
+			if fsic2.has_key(key): 
+				if fsic2[key] < fsic1[key]:
+					changes[key] = fsic1[key]
 			else :
 				changes[key] = value
 		return changes
