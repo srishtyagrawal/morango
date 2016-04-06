@@ -27,23 +27,31 @@ class Node:
 				fsic = deepcopy(self.syncDataStructure[i])
 			return fsic
 
-	def calcDiffFSIC ( self, fsic1, fsic2, filter ) :
+	def updateSyncDS (self, change, filter) :
+		if self.syncDataStructure.has_key(filter) :
+			temp = self.syncDataStructure[filter]
+			for key,value in changes.items() :
+				if temp.has_key(key) :
+					temp[key] = value	
+				else :
+					temp[key] = value
+		else :
+			self.syncDataStructure[filter] = change
+
+
+	def calcDiffFSIC ( self, fsic1, fsic2 ) :
 		"""
 		fsic1 : Local FSIC copy
 		fsic2 : Remote FSIC copy
-		filter : supplied during the initiation of sync session
-		Calculates the maximum counter for every instance ID and updates the local instances syncDataStructure
+		Calculates changes, according to the new data which local device has
 		"""
-		newFSIC = {}
-		for key,value in fsic2.items() :
-			if fsic1.has_key(key) :
-				newFSIC[key] = max(value, fsic1[key] )
-				del fsic1[key]
-			else :
-				newFSIC[key] = value
+		changes = {}
 		for key,value in fsic1.items() :
-			newFSIC[key] = value
-		self.syncDataStructure[filter] = newFSIC
+			if fsic2.has_key(key) and fsic2[key] < fsic1[key]:
+				changes[key] = fsic1[key]
+			else :
+				changes[key] = value
+		return changes
 
 	def printNode ( self ) :
 		"""
