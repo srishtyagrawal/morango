@@ -1,3 +1,5 @@
+import copy from deepcopy
+
 class Node:
 	# Morango instance ID 
 	instanceID = None
@@ -9,18 +11,31 @@ class Node:
 	def __init__( self, instanceID, counter, syncDataStructure ):
 		self.instanceID = instanceID
 		self.counter = counter
-		# Is this creating a deepcopy?
-		self.syncDataStructure = syncDataStructure
+		self.syncDataStructure = deppcopy(syncDataStructure)
 
-	# See if this is a reasonable thing to do! Or do we need to provide the value?
 	def updateCounter ( self, increment ) :
 		self.counter = self.counter + increment
 
-	#def updateSyncDataStructure ( self ) :
+	def calcFSIC (self, filter ) :
+		#Calculate which of the filters are a superset of the filter and insert in list l
+		superSetFilters = ["*"]
+		fsic = []
+		for i in superSetFilters :
+			if len(fsic) :
+				print "CalcFSIC : Reached here! Needs to be filled!"		
+			else :
+				fsic = deepcopy(self.syncDataStructure[i])
 
-	#def calculateFSIC (self, filterName ) :
-
-	#def calculateDiffFSIC ( fsic1, fsic2 ) :
+	def calcDiffFSIC ( self, fsic1, fsic2, filter ) :
+	"fsic1 : Local FSIC copy
+	 fsic2 : Remote FSIC copy
+	 filter : supplied during the initiation of sync session
+	 Calculates the maximum counter for every instance ID and updates the local instance's syncDataStructure"
+		for key,value in fsic2.items() :
+			if fsic1[key] :
+				fsic1
+			else :
+				fsic1[key] = value
 
 	def printNode ( self ) :
 		"""
