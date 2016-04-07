@@ -16,16 +16,28 @@ class Node:
 	def updateCounter ( self, increment ) :
 		self.counter = self.counter + increment
 
+	def convertStrToSet (self, string) :
+		return set(string.split("+"))
+
 	def calcFSIC (self, filter ) :
+		filterSet = self.convertStrToSet(filter)
+		superSetFilters = []
 		#Calculate which of the filters are a superset of the filter and insert in list l
-		superSetFilters = ["*"]
+		for key in self.syncDataStructure.keys():
+			keySet = self.convertStrToSet(key)
+			if filterSet.issubset(keySet) :
+				superSetFilters.append(key)
 		fsic = []
 		for i in superSetFilters :
 			if len(fsic) :
-				print "CalcFSIC : Reached here! Needs to be filled!"		
+				for k, v in self.syncDataStructure[i].items() :
+					if fsic.has_key(k):
+						fsic[k] = max(v, fsic[k])
+					else :
+						fsic[k] = v
 			else :
 				fsic = deepcopy(self.syncDataStructure[i])
-			return fsic
+		return fsic
 
 	def updateSyncDS (self, change, filter) :
 		if self.syncDataStructure.has_key(filter) :

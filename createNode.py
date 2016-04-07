@@ -43,7 +43,7 @@ def pushReq (client, server, filter):
 nodeList = []
 for i in range (10):
 	nodeList.append(Node( i, 0, {}))
-	nodeList[i].printNode()
+	#nodeList[i].printNode()
 
 
 # Testing pull request
@@ -59,3 +59,7 @@ nodeList[1].syncDataStructure = {"*":{"a":11,"b":3,"c":13,"e":52}}
 pushReq(nodeList[0], nodeList[1], "*")
 assert nodeList[1].syncDataStructure == {"*":{"a":11,"b":6,"c":21,"d":46,"e":52}}
 
+#Testing filter set 
+nodeList[2].syncDataStructure = {"*":{"a":9,"b":6,"c":21,"d":46},"*+$":{"a":46} }
+print "from here"
+print nodeList[2].calcFSIC("*")
