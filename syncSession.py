@@ -47,7 +47,7 @@ class SyncSession:
         	serverExtra = self.serverInstance.calcDiffFSIC(serverFSIC, clientFSIC)
         	# Step 5 : Server sends data to client which abides by serverExtra
         	# Step 6 : Client updates its syncDataStructure
-        	clientInstance.updateSyncDS (serverExtra, filter)
+        	self.clientInstance.updateSyncDS (serverExtra, filter)
         	#printServerClientConfig(client, server)
 
 	def printServerClientConfig(self) :
@@ -57,7 +57,7 @@ class SyncSession:
         	print "Client"
         	self.clientInstance.printNode()
 
-	def dataExchange (self, filter ) :
+	#def dataExchange (self, filter ) :
 		# To be filled according to on-demand batch sizes!
 
 	def printSyncSession ( self ) :
