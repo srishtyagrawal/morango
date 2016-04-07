@@ -7,6 +7,12 @@ class Node:
 	counter = None
 	# Sync data structure	
 	syncDataStructure = None
+	# Contents of Store
+	store = None
+	# Contents of Incoming Buffer
+	IncomingBuffer = None
+	# Contents of Outgoing Buffer
+	OutgoingBuffer = None
 
 
 	def __init__( self, instanceID, counter, syncDataStructure ):
