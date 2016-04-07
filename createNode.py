@@ -7,38 +7,6 @@ def printServerClientConfig(client, server) :
 	print "Client"
 	client.printNode()
 
-def pullReq (client, server, filter) :
-	"""
-	Pull request initialized by client with filter
-	"""
-	# Step 1 : Client calculates its FSIC locally
-	clientFSIC = client.calcFSIC(filter)
-	# Step 2 : Client sends filter and its FSIC to server
-	# Step 3 : Server creates its FSIC locally
-	serverFSIC = server.calcFSIC(filter)
-	# Step 4 : Server calculates differences in FSIC
-	serverExtra = server.calcDiffFSIC(serverFSIC, clientFSIC)
-	# Step 5 : Server sends data to client which abides by serverExtra
-	# Step 6 : Client updates its syncDataStructure
-	client.updateSyncDS (serverExtra, filter)
-	#printServerClientConfig(client, server)
-
-def pushReq (client, server, filter):
-	"""
-	Push request initialized by client with filter
-	"""
-	# Step 1 : Client sends Push request along with filter to Server
-	# Step 2 : Server caluclates its FSIC and sends it to Client
-	serverFSIC = server.calcFSIC(filter)
-	# Step 3 : Client creates its own FSIC locally 
-	clientFSIC = client.calcFSIC(filter)
-	# Step 4 : Client calculates the differences and sees what needs to be pushed
-	clientExtra = client.calcDiffFSIC(clientFSIC, serverFSIC)
-	# Step 5 : Client sends the data to server according to ClientExtra
-	# Step 6 : Server makes changes to its sync Data Structure, after receiving the records 
-	server.updateSyncDS( clientExtra, filter)
-	#printServerClientConfig(client, server)
-
 nodeList = []
 for i in range (10):
 	nodeList.append(Node( i, 0, {}))
