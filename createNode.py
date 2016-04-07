@@ -1,5 +1,12 @@
 from simulateNode import Node
 
+def printServerClientConfig(client, server) : 
+	# Print client as well as server configurations 
+	print "Server"
+	server.printNode()
+	print "Client"
+	client.printNode()
+
 def pullReq (client, server, filter) :
 	"""
 	Pull request initialized by client with filter
@@ -14,11 +21,7 @@ def pullReq (client, server, filter) :
 	# Step 5 : Server sends data to client which abides by serverExtra
 	# Step 6 : Client updates its syncDataStructure
 	client.updateSyncDS (serverExtra, filter)
-	# Print client as well as server configurations after the exchange 
-	print "Server"
-	server.printNode()
-	print "Client"
-	client.printNode()
+	#printServerClientConfig(client, server)
 
 def pushReq (client, server, filter):
 	"""
@@ -34,11 +37,7 @@ def pushReq (client, server, filter):
 	# Step 5 : Client sends the data to server according to ClientExtra
 	# Step 6 : Server makes changes to its sync Data Structure, after receiving the records 
 	server.updateSyncDS( clientExtra, filter)
-	# Print client as well as server configurations after the exchange 
-	print "Server"
-	server.printNode()
-	print "Client"
-	client.printNode()
+	#printServerClientConfig(client, server)
 
 nodeList = []
 for i in range (10):
@@ -59,7 +58,14 @@ nodeList[1].syncDataStructure = {"*":{"a":11,"b":3,"c":13,"e":52}}
 pushReq(nodeList[0], nodeList[1], "*")
 assert nodeList[1].syncDataStructure == {"*":{"a":11,"b":6,"c":21,"d":46,"e":52}}
 
-#Testing filter set 
-nodeList[2].syncDataStructure = {"*":{"a":9,"b":6,"c":21,"d":46},"*+$":{"a":46} }
-print "from here"
-print nodeList[2].calcFSIC("*")
+#Testcase where client does not have the filter in its syncDataStructure
+nodeList[2].syncDataStructure = {"x":{"a":9,"b":6,"c":21,"d":46},"x+y":{"a":46},"w":{"g":4}}
+nodeList[3].syncDataStructure = {"z+y+w":{"e":2}}
+pullReq(nodeList[2], nodeList[3], "y+z")
+assert nodeList[2].syncDataStructure == {"x":{"a":9,"b":6,"c":21,"d":46},"x+y":{"a":46} , "y+z":{"e":2}, "w":{"g":4}}
+
+#Testcase where merging is required as client has pull request filter in its syncDataStructure 
+nodeList[2].syncDataStructure = {"x":{"a":9,"b":6,"c":21,"d":46},"x+y":{"a":46},"w":{"g":4}, "y+z":{"a":5, "e":1}}
+nodeList[3].syncDataStructure = {"z+y+w":{"e":2}}
+pullReq(nodeList[2], nodeList[3], "y+z")
+assert nodeList[2].syncDataStructure == {"x":{"a":9,"b":6,"c":21,"d":46},"x+y":{"a":46} , "y+z":{"a":5,"e":2}, "w":{"g":4}}

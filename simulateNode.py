@@ -44,7 +44,7 @@ class Node:
 			keySet = self.convertStrToSet(key)
 			if filterSet.issubset(keySet) :
 				superSetFilters.append(key)
-		fsic = []
+		fsic = {}
 		for i in superSetFilters :
 			if len(fsic) :
 				for k, v in self.syncDataStructure[i].items() :
