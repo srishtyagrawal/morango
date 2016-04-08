@@ -22,8 +22,17 @@ class StoreRecord:
 		self.lastSavedByCounter = lastSavedByCounter
 		self.lastSavedByHistory = lastSavedByHistory
 
+
 	def updateRecord (self, serializedData, instanceID, counter) :
+		if self.updateLastSavedByHistory(instanceID, count):
+			self.updateLastSavedByInstanceCounter(instanceID, count)
+			self.updateRecordData(serializedData)
+		else :
+			print "Outdated record Data"
 		
+	def updateRecordData(self, serializedData) :
+		self.recordData = serializedData
+
 
 	def updateLastSavedByInstanceCounter ( self, instanceID , count ) :
 		"""
@@ -34,21 +43,28 @@ class StoreRecord:
 		# make changes to lastSavedByHistory
 		self.updatelastSavedByHistory( instanceID, count)
 
+
 	def updateLastSavedByHistory (self, instanceID, count) :
 		if self.lastSavedByHistory :
+			# Searching for the instance is lastSavedByHistory list
 			for i in range(0, len(self.lastSavedByHistory)) :
-				if self.lastSavedByHistory[i][0] == instanceID 
-					if self.lastSavedByHistory[i][1] > count :
-						self.lastSavedByHistory[i][1] = count
+				if self.lastSavedByHistory[i][0] == instanceID
+					# instance ID found and its counter is outdated 
+					if self.lastSavedByHistory[i][1] < count :
+						del self.lastSavedByHistory[i]
+						# Most recent entry goes to the end of the list
+						self.lastSavedByHistory.append((instanceID, count))
 						return True
+					# instance ID found and its counter is up-to-date
 					else :
 						return False
-				
-			else :
-			
+			self.lastSavedByHistory.append((instanceID, count))
+			return True
+		# Adding first entry to lastSavedByHistory
 		else :
 			self.lastSavedByHistory = [(instanceID,count)]
 			return True
+
 
 	def printStoreRecord ( self ) :
 		"""
