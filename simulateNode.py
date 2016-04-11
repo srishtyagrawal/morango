@@ -10,9 +10,9 @@ class Node:
 	# Contents of Store
 	store = None
 	# Contents of Incoming Buffer
-	IncomingBuffer = None
+	incomingBuffer = None
 	# Contents of Outgoing Buffer
-	OutgoingBuffer = None
+	outgoingBuffer = None
 
 
 	def __init__( self, instanceID, counter, syncDataStructure ):
@@ -96,6 +96,17 @@ class Node:
 			else :
 				changes[key] = value
 		return changes
+
+
+	def updateStore ( self, record ) :
+		if self.store :
+			if self.store.has_key(record.recordID) :
+				#Check conflict reslution etc
+				print "Not yet implemented"
+			else :
+				self.store[str(record.recordID)] = record	
+		else :
+			self.store = {str(record.recordID) : record}
 
 	def printNode ( self ) :
 		"""

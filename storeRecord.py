@@ -46,23 +46,21 @@ class StoreRecord:
 
 	def updateLastSavedByHistory (self, instanceID, count) :
 		if self.lastSavedByHistory :
-			# Searching for the instance is lastSavedByHistory list
-			for i in range(0, len(self.lastSavedByHistory)) :
-				if self.lastSavedByHistory[i][0] == instanceID
-					# instance ID found and its counter is outdated 
-					if self.lastSavedByHistory[i][1] < count :
-						del self.lastSavedByHistory[i]
-						# Most recent entry goes to the end of the list
-						self.lastSavedByHistory.append((instanceID, count))
-						return True
-					# instance ID found and its counter is up-to-date
-					else :
-						return False
-			self.lastSavedByHistory.append((instanceID, count))
-			return True
+			# Searching for the instance in lastSavedByHistory
+			if self.lastSavedByHistory.has_key(str(instanceID)) :
+				# instance ID found and its counter is outdated 
+				if self.lastSavedByHistory[str(instanceID)] < count :
+					self.lastSavedByHistory[str(instanceID)] = count
+					return True
+				# instance ID found and its counter is up-to-date
+				else :
+					return False
+			else :
+				self.lastSavedByHistory[str(instanceID)] = count
+				return True
 		# Adding first entry to lastSavedByHistory
 		else :
-			self.lastSavedByHistory = [(instanceID,count)]
+			self.lastSavedByHistory = {str(instanceID):count}
 			return True
 
 
