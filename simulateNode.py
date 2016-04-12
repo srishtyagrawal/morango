@@ -1,3 +1,4 @@
+from storeRecord import StoreRecord
 from copy import deepcopy
 
 class Node:
@@ -24,11 +25,11 @@ class Node:
 		self.syncDataStructure = deepcopy(syncDataStructure)
 
 
-	def updateCounter ( self, increment ) :
+	def updateCounter ( self ) :
 		"""
-		Update in counter should happen when data is changed at a device
+		Increment counter by 1 when data is saved/modified
 		"""
-		self.counter = self.counter + increment
+		self.counter = self.counter + 1
 
 
 	def convertStrToSet (self, string) :
@@ -98,15 +99,41 @@ class Node:
 		return changes
 
 
-	def updateStore ( self, record ) :
-		if self.store :
-			if self.store.has_key(record.recordID) :
-				#Check conflict reslution etc
-				print "Not yet implemented"
-			else :
-				self.store[str(record.recordID)] = record	
+	def updateIncomingBuffer (self, pushPullID, filter, records) :
+		"""
+		Creating Incoming Buffer
+		"""
+		if self.incomingBuffer.has_key(pushPullID) :
+			self.incomingBuffer[str(pushPullID)][1].append(records)
 		else :
-			self.store = {str(record.recordID) : record}
+			self.incomingBuffer[str(pushPullID)] = (filter, records) 
+
+
+	def addRecordFromApp (self, recordID, recordData) :
+		"""
+		Adding a new record to the store
+		"""
+		self.updateCounter()	
+		# If store has a record with the same ID
+		if self.store.has_key(recordID) :
+			temp = store[str(recordID)].lastSavedByHistory
+			temp[str(self.instanceID)] = self.counter			
+			record = StoreRecord(recordID, recordData, self.instanceID, self.counter, temp)
+		# Adding a new record with the given recordID
+		else :
+			record = StoreRecord(recordID, recordData, self.instanceID, self.counter, {str(self.instanceID) : self.counter})
+		store[str(recordID)] = record
+
+	def integrateRecord (self, record, filter) :
+		"""
+		Integrate record stored in Incoming Buffer to the store
+		"""
+		# If record exists in store check for merge-conflicts/fast-forward
+		if store.has_key(record.recordID) :
+			
+		# Record does not exist in the store, add it
+		else :
+			store[str(record.recordID)] = record
 
 	def printNode ( self ) :
 		"""
