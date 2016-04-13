@@ -27,10 +27,13 @@ class SyncSession:
         	# Step 3 : Client creates its own FSIC locally 
         	clientFSIC = self.clientInstance.calcFSIC(filter)
         	# Step 4 : Client calculates the differences and sees what needs to be pushed
-        	clientExtra = self.clientInstance.calcDiffFSIC(clientFSIC, serverFSIC)
+        	clientExtra = self.clientInstance.calcDiffFSIC(clientFSIC, serverFSIC, filter)
         	# Step 5 : Client sends the data to server according to ClientExtra
         	# Step 6 : Server makes changes to its sync Data Structure, after receiving the records 
-        	self.serverInstance.updateSyncDS( clientExtra, filter)
+        	self.serverInstance.updateSyncDS( clientExtra[0], filter)
+		print "Data sent by client"
+		for i in clientExtra[1]:
+			i.printStoreRecord()
         	#printServerClientConfig(client, server)
 
 
@@ -44,10 +47,13 @@ class SyncSession:
         	# Step 3 : Server creates its FSIC locally
         	serverFSIC = self.serverInstance.calcFSIC(filter)
         	# Step 4 : Server calculates differences in FSIC
-        	serverExtra = self.serverInstance.calcDiffFSIC(serverFSIC, clientFSIC)
+        	serverExtra = self.serverInstance.calcDiffFSIC(serverFSIC, clientFSIC, filter)
         	# Step 5 : Server sends data to client which abides by serverExtra
         	# Step 6 : Client updates its syncDataStructure
-        	self.clientInstance.updateSyncDS (serverExtra, filter)
+        	self.clientInstance.updateSyncDS (serverExtra[0], filter)
+		print "Data sent by server"
+		for i in serverExtra[1] :
+			i.printStoreRecord()
         	#printServerClientConfig(client, server)
 
 	def printServerClientConfig(self) :

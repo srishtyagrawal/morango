@@ -34,3 +34,7 @@ nodeList[3].syncDataStructure = {"z+y+w":{"e":2}}
 sync2_3 = SyncSession(1, nodeList[2], nodeList[3])
 sync2_3.pullInitiation("y+z")
 assert nodeList[2].syncDataStructure == {"x":{"a":9,"b":6,"c":21,"d":46},"x+y":{"a":46} , "y+z":{"a":5,"e":2}, "w":{"g":4}}
+
+#Adding a record to a node
+nodeList[4].addRecordFromApp("record1","abcd")
+nodeList[4].printNode()

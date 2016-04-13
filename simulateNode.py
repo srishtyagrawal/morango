@@ -22,8 +22,12 @@ class Node:
 		"""
 		self.instanceID = instanceID
 		self.counter = counter
-		self.syncDataStructure = deepcopy(syncDataStructure)
-
+		# Useful for createNode.py
+		#self.syncDataStructure = deepcopy(syncDataStructure)
+		# Creating a syncDataStructure with entry for *	
+		self.syncDataStructure = {"*":{str(self.instanceID):self.counter}} 
+		self.store = {}
+		self.incomingBuffer = {}
 
 	def updateCounter ( self ) :
 		"""
@@ -82,21 +86,35 @@ class Node:
 		else :
 			self.syncDataStructure[filter] = change
 
+	def findRecordInStore ( self, instanceID, counter, partition ) :
+		for key, value in self.store.items() :
+			#Not included the condition for partition yet
+			if value.lastSavedByInstance == instanceID and value.lastSavedByCounter == counter :
+				return value 
+		return None
 
-	def calcDiffFSIC ( self, fsic1, fsic2 ) :
+
+	def calcDiffFSIC ( self, fsic1, fsic2 , filter) :
 		"""
-		fsic1 : Local FSIC copy
-		fsic2 : Remote FSIC copy
+		fsic1  : Local FSIC copy
+		fsic2  : Remote FSIC copy
+		filter : filter associated to both FSIC instances
 		Calculates changes, according to the new data which local device has
 		"""
+		records = []
 		changes = {}
 		for key,value in fsic1.items() :
 			if fsic2.has_key(key): 
 				if fsic2[key] < fsic1[key]:
+					for i in range (fsic2[key], fsic1[key]+1) :
+						records.append(self.findRecordInStore(key, i, filter))
 					changes[key] = fsic1[key]
 			else :
+				for i in range (1, value+1):
+					records.append(self.findRecordInStore(key, i, filter))
 				changes[key] = value
-		return changes
+				
+		return (changes, records)
 
 
 	def updateIncomingBuffer (self, pushPullID, filter, records) :
@@ -116,24 +134,35 @@ class Node:
 		self.updateCounter()	
 		# If store has a record with the same ID
 		if self.store.has_key(recordID) :
-			temp = store[str(recordID)].lastSavedByHistory
+			temp = self.store[str(recordID)].lastSavedByHistory
 			temp[str(self.instanceID)] = self.counter			
-			record = StoreRecord(recordID, recordData, self.instanceID, self.counter, temp)
+			record = StoreRecord(recordID, recordData, self.instanceID, self.counter, temp, "*")
 		# Adding a new record with the given recordID
 		else :
-			record = StoreRecord(recordID, recordData, self.instanceID, self.counter, {str(self.instanceID) : self.counter})
-		store[str(recordID)] = record
+			record = StoreRecord(recordID, recordData, self.instanceID, self.counter, {str(self.instanceID) : self.counter}, "*")
+		self.store[str(recordID)] = record
+		# Making changes to Sync Data Structure 
+		self.syncDataStructure["*"][str(self.instanceID)] = self.counter
 
 	def integrateRecord (self, record, filter) :
 		"""
 		Integrate record stored in Incoming Buffer to the store
 		"""
 		# If record exists in store check for merge-conflicts/fast-forward
-		if store.has_key(record.recordID) :
-			
+		if self.store.has_key(record.recordID) :
+			storeRecordHistory = self.store[recordID].lastSavedByHistory
+			counter = 0
+			# Record's current version exists in storeRecord's history
+			if storeRecordHistory.has_key(record.lastSavedByInstance) and storeRecordHistory[record.lastSavedByInstance] > record.lastSavedByCounter :
+				counter = counter + 1 
+			# storeRecord's current version exists in record's history
+			if record.lastSavedByHistory.has_key(self.store[recordID].lastSavedByInstance) and record.lastSavedByHistory[self.store[recordID].lastSavedByInstance] > self.store[recordID].lastSavedByCounter :
+				counter = counter + 2
+			#TO BE DONE LATER  		
 		# Record does not exist in the store, add it
 		else :
-			store[str(record.recordID)] = record
+			self.store[str(record.recordID)] = record
+
 
 	def printNode ( self ) :
 		"""
@@ -145,4 +174,7 @@ class Node:
 		for key, value in self.syncDataStructure.items() :
 			print key + ":"
 			print value 
-			
+		print "Store :"	
+		for key, value in self.store.items():
+			print key + ":" 
+			value.printStoreRecord() 
