@@ -31,9 +31,14 @@ class SyncSession:
         	# Step 5 : Client sends the data to server according to ClientExtra
         	# Step 6 : Server makes changes to its sync Data Structure, after receiving the records 
         	self.serverInstance.updateSyncDS( clientExtra[0], filter)
+		# Directly integrating data received by client into server's store
+		for i in clientExtra[1] :
+			self.serverInstance.integrateRecord(i, "*")
+		'''
 		print "Data sent by client"
 		for i in clientExtra[1]:
 			i.printStoreRecord()
+		'''
         	#printServerClientConfig(client, server)
 
 
@@ -51,9 +56,14 @@ class SyncSession:
         	# Step 5 : Server sends data to client which abides by serverExtra
         	# Step 6 : Client updates its syncDataStructure
         	self.clientInstance.updateSyncDS (serverExtra[0], filter)
+		# Directly integrating data received by server into client's store
+		for i in serverExtra[1] :
+			self.clientInstance.integrateRecord(i, "*")	
+		'''
 		print "Data sent by server"
 		for i in serverExtra[1] :
 			i.printStoreRecord()
+		'''
         	#printServerClientConfig(client, server)
 
 	def printServerClientConfig(self) :
