@@ -14,7 +14,8 @@ class Node:
 	incomingBuffer = None
 	# Contents of Outgoing Buffer
 	outgoingBuffer = None
-
+	# Imitation of application data
+	appData = None
 
 	def __init__( self, instanceID, counter, syncDataStructure ):
 		"""
@@ -28,12 +29,19 @@ class Node:
 		self.syncDataStructure = {"*":{str(self.instanceID):self.counter}} 
 		self.store = {}
 		self.incomingBuffer = {}
+		self.appData = []
 
 	def updateCounter ( self ) :
 		"""
 		Increment counter by 1 when data is saved/modified
 		"""
 		self.counter = self.counter + 1
+
+	def addAppData ( self, recordID, recordData, dirtyBit, partition) :
+		"""
+		Adding records to the application
+		"""
+		self.appData.append((recordID, recordData, dirtyBit, partition))
 
 
 	def convertStrToSet (self, string) :
@@ -106,14 +114,13 @@ class Node:
 		for key,value in fsic1.items() :
 			if fsic2.has_key(key): 
 				if fsic2[key] < fsic1[key]:
-					for i in range (fsic2[key], fsic1[key]+1) :
+					for i in range (fsic2[key]+1, fsic1[key]+1) :
 						records.append(self.findRecordInStore(key, i, filter))
 					changes[key] = fsic1[key]
 			else :
 				for i in range (1, value+1):
 					records.append(self.findRecordInStore(key, i, filter))
 				changes[key] = value
-				
 		return (changes, records)
 
 
@@ -127,22 +134,28 @@ class Node:
 			self.incomingBuffer[str(pushPullID)] = (filter, records) 
 
 
-	def addRecordFromApp (self, recordID, recordData) :
+	def serialize (self, filter) :
 		"""
-		Adding a new record to the store
+		Serializing data from application to store according to filter f
 		"""
-		self.updateCounter()	
-		# If store has a record with the same ID
-		if self.store.has_key(recordID) :
-			temp = self.store[str(recordID)].lastSavedByHistory
-			temp[str(self.instanceID)] = self.counter			
-			record = StoreRecord(recordID, recordData, self.instanceID, self.counter, temp, "*")
-		# Adding a new record with the given recordID
-		else :
-			record = StoreRecord(recordID, recordData, self.instanceID, self.counter, {str(self.instanceID) : self.counter}, "*")
-		self.store[str(recordID)] = record
-		# Making changes to Sync Data Structure 
-		self.syncDataStructure["*"][str(self.instanceID)] = self.counter
+		for i in range(0, len(self.appData)) :
+			tempAppData = self.appData[i]
+			if tempAppData[2] and tempAppData[3] == filter :
+				self.updateCounter()	
+				# If store has a record with the same ID
+				if self.store.has_key(tempAppData[0]) :
+					temp = self.store[str(tempAppData[0])].lastSavedByHistory
+					temp[str(self.instanceID)] = self.counter			
+					record = StoreRecord(tempAppData[0], tempAppData[1], self.instanceID, self.counter, temp, tempAppData[3])
+				# Adding a new record with the given recordID
+				else :
+					record = StoreRecord(tempAppData[0], tempAppData[1], self.instanceID, self.counter, {str(self.instanceID) : self.counter}, tempAppData[3])
+				self.store[str(tempAppData[0])] = record
+				# Clear dirty bit from data residing in the application
+				self.appData[i] = self.appData[i][:2] + (0,) + tuple(self.appData[i][-1])
+				# Making changes to Sync Data Structure 
+				self.syncDataStructure["*"][str(self.instanceID)] = self.counter
+
 
 	def integrateRecord (self, record, filter) :
 		"""
@@ -150,14 +163,14 @@ class Node:
 		"""
 		# If record exists in store check for merge-conflicts/fast-forward
 		if self.store.has_key(record.recordID) :
-			storeRecordHistory = self.store[recordID].lastSavedByHistory
-			counter = 0
+			storeRecordHistory = self.store[record.recordID].lastSavedByHistory
+			count = 0
 			# Record's current version exists in storeRecord's history
 			if storeRecordHistory.has_key(record.lastSavedByInstance) and storeRecordHistory[record.lastSavedByInstance] > record.lastSavedByCounter :
-				counter = counter + 1 
+				count = count + 1 
 			# storeRecord's current version exists in record's history
-			if record.lastSavedByHistory.has_key(self.store[recordID].lastSavedByInstance) and record.lastSavedByHistory[self.store[recordID].lastSavedByInstance] > self.store[recordID].lastSavedByCounter :
-				counter = counter + 2
+			if record.lastSavedByHistory.has_key(self.store[record.recordID].lastSavedByInstance) and record.lastSavedByHistory[self.store[record.recordID].lastSavedByInstance] > self.store[record.recordID].lastSavedByCounter :
+				count = count + 2
 			#TO BE DONE LATER  		
 		# Record does not exist in the store, add it
 		else :

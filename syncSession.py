@@ -59,11 +59,9 @@ class SyncSession:
 		# Directly integrating data received by server into client's store
 		for i in serverExtra[1] :
 			self.clientInstance.integrateRecord(i, "*")	
-		'''
 		print "Data sent by server"
 		for i in serverExtra[1] :
-			i.printStoreRecord()
-		'''
+			print i.recordID
         	#printServerClientConfig(client, server)
 
 	def printServerClientConfig(self) :
