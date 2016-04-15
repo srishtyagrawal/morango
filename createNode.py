@@ -3,7 +3,7 @@ from syncSession import SyncSession
 
 nodeList = []
 for i in range (10):
-	nodeList.append(Node( i, 0, {}))
+	nodeList.append(Node( i ))
 	#nodeList[i].printNode()
 
 # Testing pull request

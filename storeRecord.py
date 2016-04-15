@@ -11,9 +11,10 @@ class StoreRecord:
 	# List of unique instance ID, counter(highest) pairs which have modified this record in past
 	lastSavedByHistory = None
 	# Partition information for this record
-	partition = None
+	partitionFacility = None
+	partitionUser = None
 
-	def __init__( self, recordID, recordData, lastSavedByInstance, lastSavedByCounter, lastSavedByHistory, partition):
+	def __init__( self, recordID, recordData, lastSavedByInstance, lastSavedByCounter, lastSavedByHistory, partitionFacility, partitionUser):
 		"""
 		Constructor
 		"""
@@ -22,7 +23,8 @@ class StoreRecord:
 		self.lastSavedByInstance = lastSavedByInstance
 		self.lastSavedByCounter = lastSavedByCounter
 		self.lastSavedByHistory = lastSavedByHistory
-		self.partition = partition
+		self.partitionFacility = partitionFacility
+		self.partitionUser = partitionUser
 
 	def updateRecord (self, serializedData, instanceID, counter) :
 		if self.updateLastSavedByHistory(instanceID, count):
@@ -73,4 +75,4 @@ class StoreRecord:
 		print "Record Data :" + str(self.recordData)
 		print "Last Saved by Instance & respective Counter position :" + str(self.lastSavedByInstance) + " " + str(self.lastSavedByCounter)
 		print "Last Saved by History : " + str(self.lastSavedByHistory)
-		print "Partition :" + str(self.partition)	
+		print "Partitions Facility:" + str(self.partitionFacility) + " User:"+ str(self.partitionUser)	
