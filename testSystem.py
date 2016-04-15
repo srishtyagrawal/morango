@@ -48,6 +48,26 @@ assert nodeList[1].store["record5"].lastSavedByHistory == {"B":3}
 
 # Node C pulling Node B data
 sync2_1 = SyncSession(2, nodeList[2], nodeList[1])
-temp = sync2_1.pullInitiation(("*","*"))
+sync2_1.pullInitiation(("*","*"))
 assert nodeList[2].syncDataStructure == {"*+*":{"A":1,"B":3,"C":1}}
 assert nodeList[2].store["record5"].lastSavedByHistory == {"B":3}
+
+#Adding a record to node C for Facility1 and *
+nodeList[2].addAppData("record6","record6", 1, "Facility1", "*")
+nodeList[2].serialize(("Facility1", "*"))
+assert nodeList[2].syncDataStructure == {"*+*":{"A":1,"B":3,"C":2}}
+assert nodeList[2].store["record6"].lastSavedByHistory == {"C":2}
+
+#Adding a record to node C for Facility1 and UserX
+nodeList[2].addAppData("record7","record7", 1, "Facility1", "UserX")
+nodeList[2].serialize(("Facility1", "UserX"))
+assert nodeList[2].syncDataStructure == {"*+*":{"A":1,"B":3,"C":3}}
+assert nodeList[2].store["record7"].lastSavedByHistory == {"C":3}
+
+# Node C pushes data to Node A
+sync2_0.pushInitiation(("*","*"))
+assert nodeList[0].syncDataStructure == {"*+*":{"A":1,"B":3,"C":3}}
+assert nodeList[2].syncDataStructure == {"*+*":{"A":1,"B":3,"C":3}}
+
+# Node C pushing data to Node B
+sync2_1.pushInitiation(("Facility1",""))

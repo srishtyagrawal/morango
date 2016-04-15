@@ -104,12 +104,17 @@ class Node:
 			self.syncDataStructure[filter] = change
 
 
-	def findRecordInStore ( self, instanceID, counter, partitionFacility, partitionUser ) :
+	def findRecordInStore ( self, instanceID, counterLow, counterHigh, partitionFacility, partitionUser ) :
+		records = []
 		for key, value in self.store.items() :
 			#Not included the condition for partition yet
-			if value.lastSavedByInstance == instanceID and value.lastSavedByCounter == counter :
-				return value 
-		return None
+			if value.partitionFacility == partitionFacility and value.lastSavedByInstance == instanceID and (value.lastSavedByCounter >= counterLow and value.lastSavedByCounter <= counterHigh)  :
+				if len(partitionUser) > 0 :
+					if value.partitionUser == partitionUser :
+						records.append(value)
+				else :
+					records.append(value) 
+		return records
 
 
 	def calcDiffFSIC ( self, fsic1, fsic2 , partFacility, partUser) :
@@ -124,12 +129,10 @@ class Node:
 		for key,value in fsic1.items() :
 			if fsic2.has_key(key): 
 				if fsic2[key] < fsic1[key]:
-					for i in range (fsic2[key]+1, fsic1[key]+1) :
-						records.append(self.findRecordInStore(key, i, partFacility, partUser))
+					records = records + self.findRecordInStore(key, fsic2[key]+1, fsic1[key]+1, partFacility, partUser)
 					changes[key] = fsic1[key]
 			else :
-				for i in range (1, value+1):
-					records.append(self.findRecordInStore(key, i, partFacility, partUser))
+				records = records + self.findRecordInStore(key, 1, value+1, partFacility, partUser)
 				changes[key] = value
 		return (changes, records)
 

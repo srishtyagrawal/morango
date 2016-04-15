@@ -34,11 +34,9 @@ class SyncSession:
 		# Directly integrating data received by client into server's store
 		for i in clientExtra[1] :
 			self.serverInstance.integrateRecord(i, "*+*")
-		'''
 		print "Data sent by client"
 		for i in clientExtra[1]:
-			i.printStoreRecord()
-		'''
+			print i.recordID
         	#printServerClientConfig(client, server)
 
 
@@ -48,20 +46,20 @@ class SyncSession:
         	"""
         	# Step 1 : Client calculates its FSIC locally
         	clientFSIC = self.clientInstance.calcFSIC(filter)
-        	# Step 2 : Client sends filter and its FSIC to server
+		# Step 2 : Client sends filter and its FSIC to server
         	# Step 3 : Server creates its FSIC locally
         	serverFSIC = self.serverInstance.calcFSIC(filter)
         	# Step 4 : Server calculates differences in FSIC
         	serverExtra = self.serverInstance.calcDiffFSIC(serverFSIC, clientFSIC, filter[0], filter[1])
-        	# Step 5 : Server sends data to client which abides by serverExtra
+		# Step 5 : Server sends data to client which abides by serverExtra
         	# Step 6 : Client updates its syncDataStructure
         	self.clientInstance.updateSyncDS (serverExtra[0], filter[0]+"+"+filter[1])
 		# Directly integrating data received by server into client's store
-		for i in serverExtra[1] :
-			self.clientInstance.integrateRecord(i, "*+*")	
 		print "Data sent by server"
 		for i in serverExtra[1] :
 			print i.recordID
+		for i in serverExtra[1] :
+			self.clientInstance.integrateRecord(i, "*+*")	
         	#printServerClientConfig(client, server)
 
 	def printServerClientConfig(self) :
