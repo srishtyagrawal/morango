@@ -70,4 +70,5 @@ assert nodeList[0].syncDataStructure == {"*+*":{"A":1,"B":3,"C":3}}
 assert nodeList[2].syncDataStructure == {"*+*":{"A":1,"B":3,"C":3}}
 
 # Node C pushing data to Node B
-sync2_1.pushInitiation(("Facility1",""))
+sync2_1.pushInitiation(("Facility1","*"))
+assert nodeList[1].syncDataStructure == {"*+*":{"B":3}, "Facility1+*":{"C":3,"A":1}}
