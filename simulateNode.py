@@ -223,7 +223,19 @@ class Node:
 				self.outgoingBuffer[self.requests[i][1]] = (self.requests[i][3], serverExtra)
 
 			elif self.requests[i][0] == "PUSH" :
-				print "Push not yet completed"
+				# Create a copy of your FSIC and sends it to client
+                		localFSIC = self.calcFSIC(self.requests[i][3])
+				self.requests[i][2].requests.append(("PUSH2", self.requests[i][1], localFSIC, self.requests[i][3]))
+			
+			elif self.requests[i][0] == "PUSH2" :
+				# Create a local copy of FSIC
+				localFSIC = self.calcFSIC(self.requests[i][3]) 
+				# Calculates differences in local and remote FSIC
+				clientExtra = self.calcDiffFSIC(localFSIC, self.requests[i][2], self.requests[i][3][0], \
+					self.requests[i][3][1])
+				# Put all the data to be sent to server in outgoing buffer
+				self.outgoingBuffer[self.requests[i][1]] = (self.requests[i][3], clientExtra)
+				
 			else :
 				print "Request invalid!"
 			# Delete the request after servicing

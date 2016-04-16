@@ -30,23 +30,12 @@ class SyncSession:
 		"""
         	Push request initialized by client with filter
         	"""
-        	# Step 1 : Client sends Push request along with filter to Server
-        	# Step 2 : Server caluclates its FSIC and sends it to Client
-        	serverFSIC = self.serverInstance.calcFSIC(filter)
-        	# Step 3 : Client creates its own FSIC locally 
-        	clientFSIC = self.clientInstance.calcFSIC(filter)
-        	# Step 4 : Client calculates the differences and sees what needs to be pushed
-        	clientExtra = self.clientInstance.calcDiffFSIC(clientFSIC, serverFSIC, filter[0], filter[1])
-        	# Step 5 : Client sends the data to server according to ClientExtra
-        	# Step 6 : Server makes changes to its sync Data Structure, after receiving the records 
-        	self.serverInstance.updateSyncDS( clientExtra[0], filter[0]+"+"+filter[1])
-		# Directly integrating data received by client into server's store
-		for i in clientExtra[1] :
-			self.serverInstance.integrateRecord(i, "*+*")
-		print "Data sent by client"
-		for i in clientExtra[1]:
-			print i.recordID
-        	#printServerClientConfig(client, server)
+		# Step 1 : Client calcualtes the PUSH ID
+		pushID = str(self.syncSessID) + "_" + str(self.requestCounter)
+		# Increment the counter for next session
+		self.incrementCounter()
+		# Step 3 : Client sends pushID and filter to server
+		self.serverInstance.requests.append(("PUSH", pushID, self.clientInstance, filter))
 
 
 	def pullInitiation (self, filter) :
@@ -70,11 +59,13 @@ class SyncSession:
         	print "Client"
         	self.clientInstance.printNode()
 
+
 	def dataExchange (self, sender, receiver, bufferSize ) :
 		for key,value in sender.outgoingBuffer.items() :
 			receiver.incomingBuffer[key] = value
 			# Delete the entry from Incoming buffer
 			del sender.outgoingBuffer[key] 		
+
 
 	def printSyncSession ( self ) :
 		"""

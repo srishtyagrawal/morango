@@ -53,7 +53,7 @@ assert nodeList[1].store["record5"].lastSavedByHistory == {"B":3}
 sync2_1 = SyncSession(2, nodeList[2], nodeList[1])
 sync2_1.pullInitiation(("*","*"))
 nodeList[1].serviceRequests()
-sync2_0.dataExchange(nodeList[1], nodeList[2], 10)
+sync2_1.dataExchange(nodeList[1], nodeList[2], 10)
 nodeList[2].integrate()
 assert nodeList[2].syncDataStructure == {"*+*":{"A":1,"B":3,"C":1}}
 assert nodeList[2].store["record5"].lastSavedByHistory == {"B":3}
@@ -70,13 +70,19 @@ nodeList[2].serialize(("Facility1", "UserX"))
 assert nodeList[2].syncDataStructure == {"*+*":{"A":1,"B":3,"C":3}}
 assert nodeList[2].store["record7"].lastSavedByHistory == {"C":3}
 
-"""
 # Node C pushes data to Node A
 sync2_0.pushInitiation(("*","*"))
+nodeList[0].serviceRequests()
+nodeList[2].serviceRequests()
+sync2_0.dataExchange(nodeList[2], nodeList[0], 10)
+nodeList[0].integrate()
 assert nodeList[0].syncDataStructure == {"*+*":{"A":1,"B":3,"C":3}}
 assert nodeList[2].syncDataStructure == {"*+*":{"A":1,"B":3,"C":3}}
 
 # Node C pushing data to Node B
 sync2_1.pushInitiation(("Facility1","*"))
+nodeList[1].serviceRequests()
+nodeList[2].serviceRequests()
+sync2_1.dataExchange(nodeList[2], nodeList[1], 10)
+nodeList[1].integrate()
 assert nodeList[1].syncDataStructure == {"*+*":{"B":3}, "Facility1+*":{"C":3,"A":1}}
-"""
