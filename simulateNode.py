@@ -16,6 +16,8 @@ class Node:
 	outgoingBuffer = None
 	# Imitation of application data
 	appData = None
+	# Pending requests queue
+	requests = None
 
 	def __init__( self, instanceID):
 		"""
@@ -23,13 +25,12 @@ class Node:
 		"""
 		self.instanceID = instanceID
 		self.counter = 0
-		# Useful for createNode.py
-		#self.syncDataStructure = deepcopy(syncDataStructure)
-		# Creating a syncDataStructure with entry for *	
 		self.syncDataStructure = {"*+*":{str(self.instanceID):self.counter}} 
 		self.store = {}
 		self.incomingBuffer = {}
 		self.appData = []
+		self.outgoingBuffer = {}
+		self.requests = []
 
 
 	def updateCounter ( self ) :
@@ -49,7 +50,7 @@ class Node:
 	def superSetFilters ( self, filter ) :
 		"""
 		Input : filter
-		Output : List of filters which are equal to or are superse of input filter
+		Output : List of filters which are equal to or are superset of input filter
 		"""
 		superSet = []
 		if self.syncDataStructure.has_key("*+*") :
@@ -108,7 +109,8 @@ class Node:
 		records = []
 		for key, value in self.store.items() :
 			#Not included the condition for partition yet
-			if value.partitionFacility == partitionFacility and value.lastSavedByInstance == instanceID and (value.lastSavedByCounter >= counterLow and value.lastSavedByCounter <= counterHigh)  :
+			if value.partitionFacility == partitionFacility and value.lastSavedByInstance == instanceID and \
+				(value.lastSavedByCounter >= counterLow and value.lastSavedByCounter <= counterHigh)  :
 				if len(partitionUser) > 0 :
 					if value.partitionUser == partitionUser :
 						records.append(value)
@@ -160,18 +162,33 @@ class Node:
 				if self.store.has_key(tempAppData[0]) :
 					temp = self.store[str(tempAppData[0])].lastSavedByHistory
 					temp[str(self.instanceID)] = self.counter			
-					record = StoreRecord(tempAppData[0], tempAppData[1], self.instanceID, self.counter, temp, tempAppData[3], tempAppData[4])
+					record = StoreRecord(tempAppData[0], tempAppData[1], self.instanceID, \
+						self.counter, temp, tempAppData[3], tempAppData[4])
 				# Adding a new record with the given recordID
 				else :
-					record = StoreRecord(tempAppData[0], tempAppData[1], self.instanceID, self.counter, {str(self.instanceID) : self.counter}, tempAppData[3], tempAppData[4])
+					record = StoreRecord(tempAppData[0], tempAppData[1], self.instanceID, \
+						self.counter, {str(self.instanceID) : self.counter}, tempAppData[3], tempAppData[4])
 				self.store[str(tempAppData[0])] = record
 				# Clear dirty bit from data residing in the application
 				self.appData[i] = self.appData[i][:2] + (0,) + tuple(self.appData[i][-2])
 				# Making changes to Sync Data Structure 
 				self.syncDataStructure["*+*"][str(self.instanceID)] = self.counter
 
+	def integrate ( self ) :
+		for key, value in self.incomingBuffer.items() :
+			print "Receieved Data"
+			for i in value[1][1] :
+				self.integrateRecord(i)
+                        	print i.recordID
 
-	def integrateRecord (self, record, filter) :
+                	# Update the sync data structure according to integrated data
+                	self.updateSyncDS (value[1][0], value[0][0]+"+"+value[0][1])
+
+			# After all the records from incoming buffer have been integrated to store
+			del self.incomingBuffer[key]
+
+
+	def integrateRecord (self, record) :
 		"""
 		Integrate record stored in Incoming Buffer to the store
 		"""
@@ -180,16 +197,37 @@ class Node:
 			storeRecordHistory = self.store[record.recordID].lastSavedByHistory
 			count = 0
 			# Record's current version exists in storeRecord's history
-			if storeRecordHistory.has_key(record.lastSavedByInstance) and storeRecordHistory[record.lastSavedByInstance] > record.lastSavedByCounter :
+			if storeRecordHistory.has_key(record.lastSavedByInstance) and \
+				storeRecordHistory[record.lastSavedByInstance] > record.lastSavedByCounter :
 				count = count + 1 
 			# storeRecord's current version exists in record's history
-			if record.lastSavedByHistory.has_key(self.store[record.recordID].lastSavedByInstance) and record.lastSavedByHistory[self.store[record.recordID].lastSavedByInstance] > self.store[record.recordID].lastSavedByCounter :
+			if record.lastSavedByHistory.has_key(self.store[record.recordID].lastSavedByInstance) and \
+				record.lastSavedByHistory[self.store[record.recordID].lastSavedByInstance] > \
+				self.store[record.recordID].lastSavedByCounter :
 				count = count + 2
 			#TO BE DONE LATER  		
 		# Record does not exist in the store, add it
 		else :
 			self.store[str(record.recordID)] = record
 
+
+	def serviceRequests ( self ) :
+		for i in range(0, len(self.requests)) :
+			if self.requests[i][0] == "PULL" :
+				# Create a copy of your FSIC
+                		localFSIC = self.calcFSIC(self.requests[i][3])
+				# Calculates differences in local and remote FSIC
+                		serverExtra = self.calcDiffFSIC(localFSIC, self.requests[i][4], self.requests[i][3][0], \
+					self.requests[i][3][1])
+				# Put all the data to be sent to the client in outgoing buffer
+				self.outgoingBuffer[self.requests[i][1]] = (self.requests[i][3], serverExtra)
+
+			elif self.requests[i][0] == "PUSH" :
+				print "Push not yet completed"
+			else :
+				print "Request invalid!"
+			# Delete the request after servicing
+			del self.requests[i]
 
 	def printNode ( self ) :
 		"""

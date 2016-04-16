@@ -6,7 +6,8 @@ class SyncSession:
 	clientInstance = None
 	# Server morango instance ID 
 	serverInstance = None
-
+	# Incremented on a PUSH/PULL request
+	requestCounter = None
 
 	def __init__( self, syncSessID, clientInstance, serverInstance):
 		"""
@@ -15,6 +16,14 @@ class SyncSession:
 		self.syncSessID = syncSessID
 		self.clientInstance = clientInstance
 		self.serverInstance = serverInstance
+		self.requestCounter = 0
+
+
+	def incrementCounter ( self ) :
+		"""
+		Initiation of a new PUSH/PULL request
+		"""
+		self.requestCounter = self.requestCounter + 1
 
 
 	def pushInitiation ( self, filter ) :
@@ -44,23 +53,15 @@ class SyncSession:
         	"""
         	Pull request initialized by client with filter
         	"""
-        	# Step 1 : Client calculates its FSIC locally
+		# Step 1 : Client calcualtes the PULL ID
+		pullID = str(self.syncSessID) + "_" + str(self.requestCounter)
+		# Increment the counter for next session
+		self.incrementCounter()
+        	# Step 2 : Client calculates its FSIC locally
         	clientFSIC = self.clientInstance.calcFSIC(filter)
-		# Step 2 : Client sends filter and its FSIC to server
-        	# Step 3 : Server creates its FSIC locally
-        	serverFSIC = self.serverInstance.calcFSIC(filter)
-        	# Step 4 : Server calculates differences in FSIC
-        	serverExtra = self.serverInstance.calcDiffFSIC(serverFSIC, clientFSIC, filter[0], filter[1])
-		# Step 5 : Server sends data to client which abides by serverExtra
-        	# Step 6 : Client updates its syncDataStructure
-        	self.clientInstance.updateSyncDS (serverExtra[0], filter[0]+"+"+filter[1])
-		# Directly integrating data received by server into client's store
-		print "Data sent by server"
-		for i in serverExtra[1] :
-			print i.recordID
-		for i in serverExtra[1] :
-			self.clientInstance.integrateRecord(i, "*+*")	
-        	#printServerClientConfig(client, server)
+		# Step 3 : Client sends pullID, filter and its FSIC to server
+		self.serverInstance.requests.append(("PULL", pullID, self.clientInstance, filter, clientFSIC))
+
 
 	def printServerClientConfig(self) :
         	# Print client as well as server configurations 
@@ -69,8 +70,11 @@ class SyncSession:
         	print "Client"
         	self.clientInstance.printNode()
 
-	#def dataExchange (self, filter ) :
-		# To be filled according to on-demand batch sizes!
+	def dataExchange (self, sender, receiver, bufferSize ) :
+		for key,value in sender.outgoingBuffer.items() :
+			receiver.incomingBuffer[key] = value
+			# Delete the entry from Incoming buffer
+			del sender.outgoingBuffer[key] 		
 
 	def printSyncSession ( self ) :
 		"""
