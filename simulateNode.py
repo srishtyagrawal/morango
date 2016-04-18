@@ -131,7 +131,8 @@ class Node:
 		for key,value in fsic1.items() :
 			if fsic2.has_key(key): 
 				if fsic2[key] < fsic1[key]:
-					records = records + self.findRecordInStore(key, fsic2[key]+1, fsic1[key]+1, partFacility, partUser)
+					records = records + self.findRecordInStore(key, fsic2[key]+1, \
+						fsic1[key]+1, partFacility, partUser)
 					changes[key] = fsic1[key]
 			else :
 				records = records + self.findRecordInStore(key, 1, value+1, partFacility, partUser)
@@ -209,18 +210,21 @@ class Node:
 		# Record does not exist in the store, add it
 		else :
 			self.store[str(record.recordID)] = record
+	
 
+	def fsicDiffAndSnapshot ( self, filter, receivedFSIC, pushPullID ) :
+		# Create a copy of your FSIC
+                localFSIC = self.calcFSIC(filter)
+		# Calculates differences in local and remote FSIC
+                extra = self.calcDiffFSIC(localFSIC, receivedFSIC, filter[0], filter[1])
+		# Put all the data to be sent in outgoing buffer
+		self.outgoingBuffer[pushPullID] = (filter, extra)
+		
 
 	def serviceRequests ( self ) :
 		for i in range(0, len(self.requests)) :
 			if self.requests[i][0] == "PULL" :
-				# Create a copy of your FSIC
-                		localFSIC = self.calcFSIC(self.requests[i][3])
-				# Calculates differences in local and remote FSIC
-                		serverExtra = self.calcDiffFSIC(localFSIC, self.requests[i][4], self.requests[i][3][0], \
-					self.requests[i][3][1])
-				# Put all the data to be sent to the client in outgoing buffer
-				self.outgoingBuffer[self.requests[i][1]] = (self.requests[i][3], serverExtra)
+				self.fsicDiffAndSnapshot ( self.requests[i][3], self.requests[i][4], self.requests[i][1])
 
 			elif self.requests[i][0] == "PUSH" :
 				# Create a copy of your FSIC and sends it to client
@@ -228,13 +232,7 @@ class Node:
 				self.requests[i][2].requests.append(("PUSH2", self.requests[i][1], localFSIC, self.requests[i][3]))
 			
 			elif self.requests[i][0] == "PUSH2" :
-				# Create a local copy of FSIC
-				localFSIC = self.calcFSIC(self.requests[i][3]) 
-				# Calculates differences in local and remote FSIC
-				clientExtra = self.calcDiffFSIC(localFSIC, self.requests[i][2], self.requests[i][3][0], \
-					self.requests[i][3][1])
-				# Put all the data to be sent to server in outgoing buffer
-				self.outgoingBuffer[self.requests[i][1]] = (self.requests[i][3], clientExtra)
+				self.fsicDiffAndSnapshot (self.requests[i][3], self.requests[i][2], self.requests[i][1])
 				
 			else :
 				print "Request invalid!"
