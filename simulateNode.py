@@ -218,6 +218,10 @@ class Node:
 	
 
 	def fsicDiffAndSnapshot ( self, filter, receivedFSIC, pushPullID ) :
+		"""
+		Input : remote FSIC, filter, pushPullID
+		Output : Transfers data to be sent in the outgoing buffer
+		"""
 		# Create a copy of your FSIC
                 localFSIC = self.calcFSIC(filter)
 		# Calculates differences in local and remote FSIC
@@ -244,12 +248,15 @@ class Node:
 
 
 	def serviceRequests ( self ) :
+		"""
+		Services the ongoing requests in sessions object
+		"""
 		for k in self.sessions :
 			request = self.sessions[k].ongoingRequest 
 			client = self.sessions[k].clientInstance
 			if request and request[0] == "PULL" :
 				self.fsicDiffAndSnapshot ( request[2], request[3], request[1])
-				self.dataSend(client, 10)
+				self.dataSend(client, request[1], 10)
 				self.sessions[k].ongoingRequest = None
 
 			elif request and request[0] == "PUSH" :
@@ -262,7 +269,7 @@ class Node:
 		
 			elif request and request[0] == "PUSH2" :
 				self.fsicDiffAndSnapshot (request[2], request[3], request[1])
-				self.dataSend(self.sessions[k].serverInstance, 10)
+				self.dataSend(self.sessions[k].serverInstance, request[1], 10)
 				self.sessions[k].ongoingRequest = None
 			
 			elif request :
@@ -300,11 +307,14 @@ class Node:
 		syncSessObj.serverInstance.serviceRequests()
 
 
-        def dataSend (self, receiver, bufferSize ) :
-                for key,value in self.outgoingBuffer.items() :
-                        receiver.incomingBuffer[key] = value
-                        # Delete the entry from Incoming buffer
-                        del self.outgoingBuffer[key]
+        def dataSend (self, receiver, pushPullID, bufferSize ) :
+		"""
+		Transfers data pertaining to a push/pull request in outgoing buffer 
+		to receiver's incoming buffer
+		"""
+                receiver.incomingBuffer[pushPullID] = self.outgoingBuffer[pushPullID]
+                # Delete the entry from Incoming buffer
+                del self.outgoingBuffer[pushPullID]
 		receiver.integrate()
 
 
