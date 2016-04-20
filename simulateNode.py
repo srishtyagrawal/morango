@@ -250,19 +250,20 @@ class Node:
 			if request and request[0] == "PULL" :
 				self.fsicDiffAndSnapshot ( request[2], request[3], request[1])
 				self.dataSend(client, 10)
-				del request
+				self.sessions[k].ongoingRequest = None
 
 			elif request and request[0] == "PUSH" :
 				# Create a copy of your FSIC and sends it to client
                 		localFSIC = self.calcFSIC(request[2])
+				# PUSH2 request : ("PUSH2", pushID, filter, localFSIC)
 				client.sessions[k].ongoingRequest = ("PUSH2", request[1], request[2], localFSIC)
 				client.serviceRequests()
-				del request
+				self.sessions[k].ongoingRequest = None
 		
 			elif request and request[0] == "PUSH2" :
 				self.fsicDiffAndSnapshot (request[2], request[3], request[1])
 				self.dataSend(self.sessions[k].serverInstance, 10)
-				del request
+				self.sessions[k].ongoingRequest = None
 			
 			elif request :
 				print "Request invalid!"

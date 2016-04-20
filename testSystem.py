@@ -29,14 +29,23 @@ assert nodeList[2].store["record4"].lastSavedByHistory == {"C":1}
 # Node A pulling Node B data
 sess0_1 = nodeList[0].createSyncSession(nodeList[1], "B")
 nodeList[0].pullInitiation(sess0_1, ("*","*"))
+assert nodeList[0].store["record2"].lastSavedByInstance == "B"
+assert nodeList[0].store["record2"].lastSavedByCounter == 1
+assert nodeList[0].store["record3"].lastSavedByInstance == "B"
+assert nodeList[0].store["record3"].lastSavedByCounter == 2
 assert nodeList[0].syncDataStructure == {"*+*":{"A":1,"B":2}}
 assert nodeList[1].syncDataStructure == {"*+*":{"B":2}}
 
 # Node C pulling Node A data
 sess2_0 = nodeList[2].createSyncSession(nodeList[0], "A")
 nodeList[2].pullInitiation(sess2_0, ("*","*"))
+assert nodeList[2].store["record1"].lastSavedByInstance == "A"
+assert nodeList[2].store["record1"].lastSavedByCounter == 1
+assert nodeList[2].store["record2"].lastSavedByInstance == "B"
+assert nodeList[2].store["record2"].lastSavedByCounter == 1
+assert nodeList[2].store["record3"].lastSavedByInstance == "B"
+assert nodeList[2].store["record3"].lastSavedByCounter == 2
 assert nodeList[2].syncDataStructure == {"*+*":{"A":1,"B":2,"C":1}}
-
 
 # Adding a record to a node B
 nodeList[1].addAppData("record5","record5", 1, "*", "*")
@@ -47,8 +56,10 @@ assert nodeList[1].store["record5"].lastSavedByHistory == {"B":3}
 # Node C pulling Node B data
 sess2_1 = nodeList[2].createSyncSession(nodeList[1], "B")
 nodeList[2].pullInitiation(sess2_1, ("*","*"))
-assert nodeList[2].syncDataStructure == {"*+*":{"A":1,"B":3,"C":1}}
+assert nodeList[2].store["record5"].lastSavedByInstance == "B"
+assert nodeList[2].store["record5"].lastSavedByCounter == 3
 assert nodeList[2].store["record5"].lastSavedByHistory == {"B":3}
+assert nodeList[2].syncDataStructure == {"*+*":{"A":1,"B":3,"C":1}}
 
 #Adding a record to node C for Facility1 and *
 nodeList[2].addAppData("record6","record6", 1, "Facility1", "*")
@@ -64,6 +75,8 @@ assert nodeList[2].store["record7"].lastSavedByHistory == {"C":3}
 
 # Node C pushes data to Node A
 nodeList[2].pushInitiation(sess2_0, ("*","*"))
+assert nodeList[2].sessions[sess2_0].serverInstance.instanceID == "A"
+assert nodeList[0].sessions[sess2_0].clientInstance.instanceID == "C"
 assert nodeList[0].syncDataStructure == {"*+*":{"A":1,"B":3,"C":3}}
 assert nodeList[2].syncDataStructure == {"*+*":{"A":1,"B":3,"C":3}}
 

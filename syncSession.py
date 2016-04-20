@@ -44,4 +44,5 @@ class SyncSession:
 		print "Sync Session ID :" + str(self.syncSessID)
 		print "Client Instance :" + str(self.clientInstance)
 		print "Server Instance  :" + str(self.serverInstance)
-			
+		print "Counter : " + str(self.requestCounter)
+		print "Ongoing Request :" + str(self.ongoingRequest)		
