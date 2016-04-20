@@ -8,6 +8,8 @@ class SyncSession:
 	serverInstance = None
 	# Incremented on a PUSH/PULL request
 	requestCounter = None
+	# Ongoing request 
+	ongoingRequest = None
 
 	def __init__( self, syncSessID, clientInstance, serverInstance):
 		"""
@@ -17,6 +19,7 @@ class SyncSession:
 		self.clientInstance = clientInstance
 		self.serverInstance = serverInstance
 		self.requestCounter = 0
+		self.ongoingRequest = None
 
 
 	def incrementCounter ( self ) :

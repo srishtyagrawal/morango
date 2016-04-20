@@ -37,6 +37,7 @@ sess2_0 = nodeList[2].createSyncSession(nodeList[0], "A")
 nodeList[2].pullInitiation(sess2_0, ("*","*"))
 assert nodeList[2].syncDataStructure == {"*+*":{"A":1,"B":2,"C":1}}
 
+
 # Adding a record to a node B
 nodeList[1].addAppData("record5","record5", 1, "*", "*")
 nodeList[1].serialize(("*","*"))
