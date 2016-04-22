@@ -16,7 +16,7 @@ assert nodeList[0].store["record1"].lastSavedByHistory == {"A":1}
 nodeList[1].addAppData("record2","record2", 1, Node.ALL, Node.ALL)
 nodeList[1].addAppData("record3","record3", 1, Node.ALL, Node.ALL)
 nodeList[1].serialize((Node.ALL, Node.ALL))
-assert nodeList[1].syncDataStructure == {"*+*":{"B":2}}
+assert nodeList[1].syncDataStructure == {Node.ALL + "+" + Node.ALL:{"B":2}}
 assert nodeList[1].store["record2"].lastSavedByHistory == {"B":1}
 assert nodeList[1].store["record3"].lastSavedByHistory == {"B":2}
 

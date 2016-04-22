@@ -23,8 +23,8 @@ class Node:
 	# Dictionary of session objects
 	sessions = None
 
-	ALL = "*"
-	GENERIC = ""
+	ALL = ""
+	GENERIC = None
 
 	def __init__( self, instanceID):
 		"""
