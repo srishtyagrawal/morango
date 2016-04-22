@@ -116,14 +116,21 @@ class Node:
 	def findRecordInStore ( self, instanceID, counterLow, counterHigh, partitionFacility, partitionUser ) :
 		records = []
 		for key, value in self.store.items() :
-			#Not included the condition for partition yet
-			if value.partitionFacility == partitionFacility and value.lastSavedByInstance == instanceID and \
-				(value.lastSavedByCounter >= counterLow and value.lastSavedByCounter <= counterHigh)  :
-				if len(partitionUser) > 0 :
-					if value.partitionUser == partitionUser :
-						records.append(value)
-				else :
-					records.append(value) 
+			recordCounter = value.lastSavedByCounter
+			recordInstance = value.lastSavedByInstance
+
+			if recordCounter >= counterLow and recordCounter <= counterHigh and recordInstance == instanceID :
+				# Full replication condition, get all the records 
+				if partitionFacility == Node.ALL and partitionUser == Node.ALL :
+					records.append(value)
+				elif partitionFacility == Node.ALL and partitionUser != Node.ALL :
+					raise ValueError("Facility ALL but User not ALL") 	
+				elif partitionFacility != Node.ALL :
+					if value.partitionFacility == partitionFacility :
+						if partitionUser == Node.ALL :
+							records.append(value)
+						if partitionUser !=Node.ALL and value.partitionUser == partitionUser:
+							records.append(value) 
 		return records
 
 

@@ -105,6 +105,16 @@ assert nodeList[0].sessions[sess2_0].clientInstance.instanceID == "C"
 assert nodeList[0].syncDataStructure == {Node.ALL + "+" + Node.ALL:{"A":1,"B":3,"C":3}}
 assert nodeList[2].syncDataStructure == {Node.ALL + "+" + Node.ALL:{"A":1,"B":3,"C":3}}
 
+# At this point the nodes have following data :
+# A : record1, record2, record3, record4, record5, record6, record7
+# B : record2, record3, record5
+# C : record1, record2, record3, record4, record5, record6, record7 
+
 # Node C pushing data to Node B
 nodeList[2].pushInitiation(sess2_1, ("Facility1", Node.ALL))
 assert nodeList[1].syncDataStructure == {Node.ALL + "+" + Node.ALL:{"B":3}, "Facility1+" + Node.ALL:{"C":3,"A":1}}
+
+# At this point the nodes have following data :
+# A : record1, record2, record3, record4, record5, record6, record7
+# B : record2, record3, record5, record6, record7
+# C : record1, record2, record3, record4, record5, record6, record7 
