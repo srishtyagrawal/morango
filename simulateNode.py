@@ -113,6 +113,22 @@ class Node:
 			self.syncDataStructure[filter] = change
 
 
+	def isSubset ( self, filter1, filter2 ) :
+		"""
+		Return a boolean value if filter1 is a subset of filter2
+		"""
+		if filter2[0] == Node.ALL and filter2[1] == Node.ALL :
+			return True 
+		elif filter2[0] == Node.ALL and filter2[1] != Node.ALL :
+			raise ValueError("Facility ALL but User not ALL")
+		elif filter2[0] != Node.ALL :
+			if filter1[0] == filter2[0] :
+				if filter2[1] == Node.ALL :
+					return True
+				elif filter2[1] != Node.ALL and filter2[1] == filter1[1] :
+					return True
+		return False
+
 	def findRecordInStore ( self, instanceID, counterLow, counterHigh, partitionFacility, partitionUser ) :
 		records = []
 		for key, value in self.store.items() :
@@ -120,17 +136,9 @@ class Node:
 			recordInstance = value.lastSavedByInstance
 
 			if recordCounter >= counterLow and recordCounter <= counterHigh and recordInstance == instanceID :
-				# Full replication condition, get all the records 
-				if partitionFacility == Node.ALL and partitionUser == Node.ALL :
-					records.append(value)
-				elif partitionFacility == Node.ALL and partitionUser != Node.ALL :
-					raise ValueError("Facility ALL but User not ALL") 	
-				elif partitionFacility != Node.ALL :
-					if value.partitionFacility == partitionFacility :
-						if partitionUser == Node.ALL :
-							records.append(value)
-						if partitionUser !=Node.ALL and value.partitionUser == partitionUser:
-							records.append(value) 
+				# Full replication condition, get all the records
+				if self.isSubset ((value.partitionFacility, value.partitionUser), (partitionFacility, partitionUser)) :
+					records.append(value) 
 		return records
 
 
@@ -172,7 +180,7 @@ class Node:
 		"""
 		for i in range(0, len(self.appData)) :
 			tempAppData = self.appData[i]
-			if tempAppData[2] and tempAppData[3] == filter[0] and tempAppData[4] == filter[1] :
+			if tempAppData[2] and self.isSubset((tempAppData[3], tempAppData[4]),filter) :
 				self.updateCounter()	
 				# If store has a record with the same ID
 				if self.store.has_key(tempAppData[0]) :

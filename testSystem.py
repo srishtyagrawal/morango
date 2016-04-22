@@ -81,8 +81,8 @@ assert nodeList[2].syncDataStructure == {Node.ALL + "+" + Node.ALL:{"A":1,"B":3,
 # B : record2, record3, record5
 # C : record1, record2, record3, record4, record5 
 
-#Adding a record to node C for Facility1 and *
-nodeList[2].addAppData("record6","record6", 1, "Facility1", Node.ALL)
+#Adding a record to node C for Facility1 and Node.GENERIC
+nodeList[2].addAppData("record6","record6", 1, "Facility1", Node.GENERIC)
 nodeList[2].serialize(("Facility1", Node.ALL))
 assert nodeList[2].syncDataStructure == {Node.ALL + "+" + Node.ALL :{"A":1,"B":3,"C":2}}
 assert nodeList[2].store["record6"].lastSavedByHistory == {"C":2}
@@ -118,3 +118,11 @@ assert nodeList[1].syncDataStructure == {Node.ALL + "+" + Node.ALL:{"B":3}, "Fac
 # A : record1, record2, record3, record4, record5, record6, record7
 # B : record2, record3, record5, record6, record7
 # C : record1, record2, record3, record4, record5, record6, record7 
+
+"""
+#Adding a record to node B for Facility2 and Node.GENERIC
+nodeList[2].addAppData("record6","record6", 1, "Facility1", Node.GENERIC)
+nodeList[2].serialize(("Facility1", Node.ALL))
+assert nodeList[2].syncDataStructure == {Node.ALL + "+" + Node.ALL :{"A":1,"B":3,"C":2}}
+assert nodeList[2].store["record6"].lastSavedByHistory == {"C":2}
+"""
