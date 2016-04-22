@@ -272,22 +272,23 @@ class Node:
 		for k in self.sessions :
 			request = self.sessions[k].ongoingRequest 
 			client = self.sessions[k].clientInstance
+
 			if request and request[0] == "PULL" :
 				self.fsicDiffAndSnapshot ( request[2], request[3], request[1])
-				self.dataSend(client, request[1], 10)
+				self.send(client, k, ("DATA", request[1], self.outgoingBuffer[(request[1])]))
+				del self.outgoingBuffer[request[1]]
 				self.sessions[k].ongoingRequest = None
 
 			elif request and request[0] == "PUSH" :
 				# Create a copy of your FSIC and sends it to client
                 		localFSIC = self.calcFSIC(request[2])
 				# PUSH2 request : ("PUSH2", pushID, filter, localFSIC)
-				client.sessions[k].ongoingRequest = ("PUSH2", request[1], request[2], localFSIC)
-				client.serviceRequests()
+				self.send(client, k, ("PUSH2", request[1], request[2], localFSIC))
 				self.sessions[k].ongoingRequest = None
 		
 			elif request and request[0] == "PUSH2" :
 				self.fsicDiffAndSnapshot (request[2], request[3], request[1])
-				self.dataSend(self.sessions[k].serverInstance, request[1], 10)
+				self.send(self.sessions[k].serverInstance, k, ("DATA", request[1], self.outgoingBuffer[request[1]]))
 				self.sessions[k].ongoingRequest = None
 			
 			elif request :
@@ -306,9 +307,7 @@ class Node:
                 # Step 2 : Client calculates its FSIC locally
                 localFSIC = self.calcFSIC(filter)
                 # Step 3 : Client sends pullID, filter and its FSIC to server
-		#syncSessObj.ongoingRequest = ("PULL started", pullID, filter)
-                syncSessObj.serverInstance.sessions[syncSessID].ongoingRequest = ("PULL", pullID, filter, localFSIC)
-		syncSessObj.serverInstance.serviceRequests()
+		self.send (syncSessObj.serverInstance, syncSessID, ("PULL", pullID, filter, localFSIC))
 
 
         def pushInitiation ( self, syncSessID , filter ) :
@@ -321,20 +320,28 @@ class Node:
                 # Increment the counter for next session
                 syncSessObj.incrementCounter()
                 # Step 3 : Client sends pushID and filter to server
-                syncSessObj.serverInstance.sessions[syncSessID].ongoingRequest = ("PUSH", pushID, filter)
-		syncSessObj.serverInstance.serviceRequests()
+		self.send (syncSessObj.serverInstance, syncSessID, ("PUSH", pushID, filter))
 
 
-        def dataSend (self, receiver, pushPullID, bufferSize ) :
+	def send (self, receiver, sessionID, data) :
 		"""
-		Transfers data pertaining to a push/pull request in outgoing buffer 
-		to receiver's incoming buffer
+		The only API through which a device communicates with another device
 		"""
-                receiver.incomingBuffer[pushPullID] = self.outgoingBuffer[pushPullID]
-                # Delete the entry from Incoming buffer
-                del self.outgoingBuffer[pushPullID]
-		receiver.integrate()
+		receiver.receive(self, sessionID, data)
 
+
+	def receive (self, sender, sessionID, data) :
+		"""
+		Action to be taken once data arrives on a device
+		"""
+		if data[0] == "PULL" or data[0] == "PUSH" or data[0] == "PUSH2":
+			self.sessions[sessionID].ongoingRequest = data
+			self.serviceRequests()
+
+		elif data[0] == "DATA" :
+			self.incomingBuffer[data[1]] = data[2]
+			self.integrate()	
+		
 
 	def printNode ( self ) :
 		"""
