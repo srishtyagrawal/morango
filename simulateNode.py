@@ -23,13 +23,16 @@ class Node:
 	# Dictionary of session objects
 	sessions = None
 
+	ALL = "*"
+	GENERIC = ""
+
 	def __init__( self, instanceID):
 		"""
 		Constructor
 		"""
 		self.instanceID = instanceID
 		self.counter = 0
-		self.syncDataStructure = {"*+*":{str(self.instanceID):self.counter}} 
+		self.syncDataStructure = {Node.ALL + "+" + Node.ALL:{str(self.instanceID):self.counter}} 
 		self.store = {}
 		self.incomingBuffer = {}
 		self.appData = []
@@ -58,12 +61,12 @@ class Node:
 		Output : List of filters which are equal to or are superset of input filter
 		"""
 		superSet = []
-		if self.syncDataStructure.has_key("*+*") :
-			superSet.append("*+*")
-		if filter[0] != "*" :
-			if self.syncDataStructure.has_key(filter[0]+"+*") :
-				superSet.append(filter[0]+"+*")
-			if filter[1] != "*" :
+		if self.syncDataStructure.has_key(Node.ALL + "+" + Node.ALL) :
+			superSet.append(Node.ALL + "+" + Node.ALL)
+		if filter[0] != Node.ALL :
+			if self.syncDataStructure.has_key(filter[0]+"+" + Node.ALL) :
+				superSet.append(filter[0]+"+"+ Node.ALL)
+			if filter[1] != Node.ALL :
 				if self.syncDataStructure.has_key(filter[0]+"+"+filter[1]) :
 					superSet.append(filter[0]+"+"+filter[1])
 		return superSet
@@ -178,7 +181,7 @@ class Node:
 				# Clear dirty bit from data residing in the application
 				self.appData[i] = self.appData[i][:2] + (0,) + tuple(self.appData[i][-2])
 				# Making changes to Sync Data Structure 
-				self.syncDataStructure["*+*"][str(self.instanceID)] = self.counter
+				self.syncDataStructure[Node.ALL + "+" + Node.ALL][str(self.instanceID)] = self.counter
 
 	def integrate ( self ) :
 		for key, value in self.incomingBuffer.items() :
