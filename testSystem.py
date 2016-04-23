@@ -119,3 +119,9 @@ assert nodeList[1].syncDataStructure == {Node.ALL + "+" + Node.ALL:{"B":3}, "Fac
 # B : record2, record3, record5, record6, record7
 # C : record1, record2, record3, record4, record5, record6, record7 
 
+#Checking if compareVectors is correct
+assert nodeList[0].compareVectors({"A":1},{"A":2}) == 0
+assert nodeList[0].compareVectors({"A":1},{"A":1, "B":2}) == 0
+assert nodeList[0].compareVectors({"A":4, "B":3},{"A":2}) == 1
+assert nodeList[0].compareVectors({"A":2, "B":3},{"A":2}) == 1
+assert nodeList[0].compareVectors({"A":2, "B":3},{"A":3}) == 2

@@ -211,6 +211,46 @@ class Node:
 			# After all the records from incoming buffer have been integrated to store
 			del self.incomingBuffer[key]
 
+	def compareVectors (self, v1, v2) :
+		"""
+		Return 0 if v1 is smaller than v2
+		       1 if v2 is smaller than v1 
+		       2 if there is a merge conflict i.e there is no ordering between v1 and v2
+		       3 if v1 is same as v2
+		"""
+		# Checking if two vectors are equal
+		temp = set()
+		if len(v1) == len(v2) :
+			for key,value in v1.items() :
+				if v2.has_key(key) and v2[key] == v1[key] :
+					temp.add(3)
+				else :
+					temp.add(9)
+		if len(temp) == 1 and (3 in temp) :
+			return temp
+		temp = set()
+
+		# Checking is v1 is smaller than v2
+		for key, value in v1.items() :
+			if v2.has_key(key) and v2[key] >= v1[key] :
+				temp.add(0)
+			else :
+				temp.add(2)
+		if len(temp) == 1 and (0 in temp) :
+			return 0
+
+		# Checking if v2 is smaller than v1
+		temp = set()
+		for key,value in v2.items() :
+			if v1.has_key(key) and v1[key] >= v2[key] :
+				temp.add(1)
+			else :
+				temp.add(3)
+		if len(temp) == 1 and (1 in temp) :
+			return 1 	
+		else :
+			return 2
+
 
 	def integrateRecord (self, record) :
 		"""
@@ -219,17 +259,15 @@ class Node:
 		# If record exists in store check for merge-conflicts/fast-forward
 		if self.store.has_key(record.recordID) :
 			storeRecordHistory = self.store[record.recordID].lastSavedByHistory
-			count = 0
-			# Record's current version exists in storeRecord's history
-			if storeRecordHistory.has_key(record.lastSavedByInstance) and \
-				storeRecordHistory[record.lastSavedByInstance] > record.lastSavedByCounter :
-				count = count + 1 
-			# storeRecord's current version exists in record's history
-			if record.lastSavedByHistory.has_key(self.store[record.recordID].lastSavedByInstance) and \
-				record.lastSavedByHistory[self.store[record.recordID].lastSavedByInstance] > \
-				self.store[record.recordID].lastSavedByCounter :
-				count = count + 2
-			#TO BE DONE LATER  		
+			if self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 2 :
+				print "There is a merge conflict!"
+			elif self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 1  :
+				self.store[str(record.recordID)] = record
+			elif self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 0 \
+				or self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 3:
+				return		
+			else :
+				raise ValueError ("Invalid return from compare vector method!")
 		# Record does not exist in the store, add it
 		else :
 			self.store[str(record.recordID)] = record
