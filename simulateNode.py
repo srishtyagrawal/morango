@@ -18,8 +18,6 @@ class Node:
 	outgoingBuffer = None
 	# Imitation of application data
 	appData = None
-	# Pending requests queue
-	requests = None
 	# Dictionary of session objects
 	sessions = None
 
@@ -30,14 +28,17 @@ class Node:
 		"""
 		Constructor
 		"""
+		if len(instanceID) == 0 :
+			raise ValueError('Length of instanceID should be greater than 0')
 		self.instanceID = instanceID
+		# Initiate a node with counter position 0
 		self.counter = 0
+		# Add an entry for full replication containing own instance ID and counter position
 		self.syncDataStructure = {Node.ALL + "+" + Node.ALL:{str(self.instanceID):self.counter}} 
 		self.store = {}
 		self.incomingBuffer = {}
 		self.appData = []
 		self.outgoingBuffer = {}
-		self.requests = []
 		self.sessions = {}
 
 
@@ -52,21 +53,29 @@ class Node:
 		"""
 		Adding records to the application
 		"""
+		if len(recordID) == 0 :
+			raise ValueError('Length of recordID should be greater than 0')
+		
 		# Third argument is the dirty bit which will always be set for new data
 		self.appData.append((recordID, recordData, 1, partitionFacility, partitionUser))
 
 
 	def superSetFilters ( self, filter ) :
 		"""
-		Input : filter
+		Input  : filter
 		Output : List of filters which are equal to or are superset of input filter
 		"""
 		superSet = []
+		# Add the full replication entry from Sync Data Structure		
 		if self.syncDataStructure.has_key(Node.ALL + "+" + Node.ALL) :
 			superSet.append(Node.ALL + "+" + Node.ALL)
+		else :
+			raise ValueError("No full replication entry in Sync Datastructure of node " + self.instanceID)
+
 		if filter[0] != Node.ALL :
 			if self.syncDataStructure.has_key(filter[0]+"+" + Node.ALL) :
 				superSet.append(filter[0]+"+"+ Node.ALL)
+			# User partition is specifically mentioned
 			if filter[1] != Node.ALL :
 				if self.syncDataStructure.has_key(filter[0]+"+"+filter[1]) :
 					superSet.append(filter[0]+"+"+filter[1])
@@ -76,7 +85,7 @@ class Node:
 	def calcFSIC (self, filter ) :
 		"""
 		Given a filter(f), finds out maximum counter per instance for all 
-		filters which are equal to or are superset of filter(f).
+		filters which are superset of filter(f).
 		"""
 		# List of all superset filters
 		superSetFilters = self.superSetFilters (filter)
@@ -99,7 +108,7 @@ class Node:
 
 	def updateSyncDS (self, change, filter) :
 		"""
-		Makes changes to syncDataStructure after data has been received	
+		Makes changes to syncDataStructure after data has been integrated to the Store	
 		"""
 		# Merging existing syncDataSructure to accomodate 
 		if self.syncDataStructure.has_key(filter) :
@@ -129,6 +138,7 @@ class Node:
 				elif filter2[1] != Node.ALL and filter2[1] == filter1[1] :
 					return True
 		return False
+
 
 	def findRecordInStore ( self, instanceID, counterLow, counterHigh, partitionFacility, partitionUser ) :
 		records = []
@@ -211,6 +221,7 @@ class Node:
 
 			# After all the records from incoming buffer have been integrated to store
 			del self.incomingBuffer[key]
+
 
 	def compareVectors (self, v1, v2) :
 		"""
