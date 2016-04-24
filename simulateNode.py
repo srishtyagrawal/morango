@@ -48,11 +48,12 @@ class Node:
 		self.counter = self.counter + 1
 
 
-	def addAppData ( self, recordID, recordData, dirtyBit, partitionFacility, partitionUser) :
+	def addAppData ( self, recordID, recordData, partitionFacility, partitionUser) :
 		"""
 		Adding records to the application
 		"""
-		self.appData.append((recordID, recordData, dirtyBit, partitionFacility, partitionUser))
+		# Third argument is the dirty bit which will always be set for new data
+		self.appData.append((recordID, recordData, 1, partitionFacility, partitionUser))
 
 
 	def superSetFilters ( self, filter ) :

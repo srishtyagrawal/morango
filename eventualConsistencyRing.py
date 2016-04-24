@@ -7,8 +7,8 @@ ringSize = 10
 for i in range (ringSize):
 	nodeList.append(Node( chr(i+65) ) )
 	# Create 2 records per node 
-	nodeList[i].addAppData(chr(i+65) + str(1),chr(i+65) + str(1),1, Node.ALL, Node.ALL )
-	nodeList[i].addAppData(chr(i+65) + str(2),chr(i+65) + str(2),1, Node.ALL, Node.ALL )
+	nodeList[i].addAppData(chr(i+65) + str(1),chr(i+65) + str(1), Node.ALL, Node.ALL )
+	nodeList[i].addAppData(chr(i+65) + str(2),chr(i+65) + str(2), Node.ALL, Node.ALL )
 	nodeList[i].serialize((Node.ALL, Node.ALL))
 
 # i client , i+1 server	
