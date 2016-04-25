@@ -283,9 +283,9 @@ class Node:
 			self.store[str(record.recordID)] = record
 	
 
-	def fsicDiffAndSnapshot ( self, filter, receivedFSIC, pushPullID ) :
+	def fsicDiffAndSnapshot ( self, filter, receivedFSIC ) :
 		"""
-		Input : remote FSIC, filter, pushPullID
+		Input : remote FSIC, filter
 		Output : Transfers data to be sent in the outgoing buffer
 		"""
 		# Create a copy of your FSIC
@@ -293,8 +293,15 @@ class Node:
 		# Calculates differences in local and remote FSIC
                 extra = self.calcDiffFSIC(localFSIC, receivedFSIC, filter[0], filter[1])
 		# Put all the data to be sent in outgoing buffer
-		self.outgoingBuffer[pushPullID] = (filter, extra)
+		return (filter, extra)
 		
+
+	def queue (self, pushPullID, filter, snapshot) :
+		"""
+		Put data obtained after snapshotting in outgoing buffer
+		"""
+		self.outgoingBuffer[pushPullID] = (filter, snapshot) 
+
 
 	def createSyncSession ( self, serverInstance, serverInstanceID) :
 		"""
@@ -322,7 +329,8 @@ class Node:
 			client = self.sessions[k].clientInstance
 
 			if request and request[0] == "PULL" :
-				self.fsicDiffAndSnapshot ( request[2], request[3], request[1])
+				filter, snapshot = self.fsicDiffAndSnapshot ( request[2], request[3])
+				self.queue(request[1], filter, snapshot)
 				self.send(client, k, ("DATA", request[1], self.outgoingBuffer[(request[1])]))
 				del self.outgoingBuffer[request[1]]
 				self.sessions[k].ongoingRequest = None
@@ -335,7 +343,8 @@ class Node:
 				self.sessions[k].ongoingRequest = None
 		
 			elif request and request[0] == "PUSH2" :
-				self.fsicDiffAndSnapshot (request[2], request[3], request[1])
+				filter, snapshot = self.fsicDiffAndSnapshot (request[2], request[3])
+				self.queue(request[1], filter, snapshot)
 				self.send(self.sessions[k].serverInstance, k, ("DATA", request[1], self.outgoingBuffer[request[1]]))
 				self.sessions[k].ongoingRequest = None
 			
