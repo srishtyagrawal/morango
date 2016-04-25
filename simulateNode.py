@@ -211,10 +211,8 @@ class Node:
 
 	def integrate ( self ) :
 		for key, value in self.incomingBuffer.items() :
-			print "Receieved Data"
 			for i in value[1][1] :
 				self.integrateRecord(i)
-                        	print i.recordID
 
                 	# Update the sync data structure according to integrated data
                 	self.updateSyncDS (value[1][0], value[0][0]+"+"+value[0][1])
