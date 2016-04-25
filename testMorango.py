@@ -15,6 +15,72 @@ class Test(unittest.TestCase) :
 	def test_emptyRecordID(self) :
 		self.assertRaises(ValueError, lambda: StoreRecord("","data","A",1,{},"Facility1", "UserX"))
 
+
+	def test_serialize(self) :
+        	node = Node("A")
+        	# Create some application data for the node
+        	node.addAppData("record1","Record1 data", Node.ALL, Node.ALL )
+        	node.addAppData("record2","Record2 data", Node.ALL, Node.GENERIC )
+        	node.serialize((Node.ALL, Node.ALL))
+
+		self.assertEqual(len(node.appData), 2)
+		# Check if their dirty bits have been cleared 
+		self.assertEqual(node.appData[0][2], 0)
+		self.assertEqual(node.appData[1][2], 0)
+
+		self.assertEqual(node.store["record1"].lastSavedByInstance, "A")
+		self.assertEqual(node.store["record1"].lastSavedByCounter, 1)
+		self.assertEqual(node.store["record1"].lastSavedByHistory, {"A":1})
+		self.assertEqual(node.store["record1"].partitionFacility, Node.ALL)
+		self.assertEqual(node.store["record1"].partitionUser, Node.ALL)
+
+		self.assertEqual(node.store["record2"].lastSavedByInstance, "A")
+		self.assertEqual(node.store["record2"].lastSavedByCounter, 2)
+		self.assertEqual(node.store["record2"].lastSavedByHistory, {"A":2})
+		self.assertEqual(node.store["record2"].partitionFacility, Node.ALL)
+		self.assertEqual(node.store["record2"].partitionUser, Node.GENERIC)
+
+		# Create data for different facilities and users
+        	node.addAppData("record3","Record3 data", "Facility1", Node.GENERIC )
+        	node.addAppData("record4","Record4 data", "Facility1", "UserX" )
+        	node.addAppData("record5","Record5 data", "Facility1", "UserY" )
+        	node.addAppData("record6","Record6 data", "Facility2", "UserX" )
+        	node.addAppData("record7","Record7 data", Node.ALL, Node.ALL)
+
+		self.assertRaises(ValueError, lambda:node.serialize((Node.ALL, "UserX")) )
+
+		node.serialize(("Facility3", "UserZ"))
+		# Length of appData nd store should not change after serialization
+		self.assertEqual(len(node.store), 2)
+		self.assertEqual(len(node.appData), 7)
+
+		node.serialize(("Facility1", "UserX"))
+		self.assertEqual(len(node.store), 3)
+		self.assertEqual(len(node.appData), 7)
+		self.assertEqual(node.appData[3][2], 0)
+		self.assertEqual(node.store["record4"].lastSavedByInstance, "A")
+		self.assertEqual(node.store["record4"].lastSavedByCounter, 3)
+		self.assertEqual(node.store["record4"].lastSavedByHistory, {"A":3})
+		self.assertEqual(node.store["record4"].partitionFacility, "Facility1")
+		self.assertEqual(node.store["record4"].partitionUser, "UserX")
+
+		node.serialize(("Facility1", Node.ALL))
+		self.assertEqual(len(node.store), 5)
+		self.assertEqual(len(node.appData), 7)
+		self.assertEqual(node.appData[2][2], 0)
+		self.assertEqual(node.appData[4][2], 0)
+		self.assertEqual(node.store["record3"].lastSavedByHistory, {"A":4})
+		self.assertEqual(node.store["record5"].lastSavedByHistory, {"A":5})
+
+		node.serialize((Node.ALL, Node.ALL))
+		self.assertEqual(len(node.store), 7)
+		self.assertEqual(len(node.appData), 7)
+		self.assertEqual(node.appData[5][2], 0)
+		self.assertEqual(node.appData[6][2], 0)
+		self.assertEqual(node.store["record6"].lastSavedByHistory, {"A":6})
+		self.assertEqual(node.store["record7"].lastSavedByHistory, {"A":7})
+
+
 	def test_eventualConsistencyRing(self) :
 		nodeList = []
 		ringSize = self.RINGSIZE
