@@ -125,3 +125,13 @@ assert nodeList[0].compareVectors({"A":1},{"A":1, "B":2}) == 0
 assert nodeList[0].compareVectors({"A":4, "B":3},{"A":2}) == 1
 assert nodeList[0].compareVectors({"A":2, "B":3},{"A":2}) == 1
 assert nodeList[0].compareVectors({"A":2, "B":3},{"A":3}) == 2
+
+
+
+
+print nodeList[0].appData 
+nodeList[0].deserialize()
+print nodeList[0].appData 
+print nodeList[1].appData 
+nodeList[1].deserialize()
+print nodeList[1].appData 

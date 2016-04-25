@@ -206,6 +206,30 @@ class Node:
 				# Making changes to Sync Data Structure 
 				self.syncDataStructure[Node.ALL + "+" + Node.ALL][str(self.instanceID)] = self.counter
 
+
+	def deserialize(self) :
+		"""
+		Convert records in store to application data
+		"""
+		for key,value in self.store.items() :
+			# flag used to avoid duplication as appData is list and not dictionary
+			flag = 0
+			for i in range (len(self.appData)):
+				# record exists in the application
+				if self.appData[i][0] == key :
+					flag = 1
+					# If dirty bit is set then new changes were made 
+					if self.appData[i][2] == 1 :
+						raise ValueError('Merge Conflict while derializing data')
+					# If dirty bit is not set, then overwrite the data 
+					else :
+						self.appData[i] = (key, value.recordData, 0, value.partitionFacility,\
+							value.partitionUser)	
+			# If the recordID does not exist in the application
+			if flag == 0 :
+				self.appData.append((key, value.recordData, 0, value.partitionFacility, value.partitionUser))
+			
+
 	def integrate ( self ) :
 		for key, value in self.incomingBuffer.items() :
 			for i in value[1][1] :
@@ -267,7 +291,7 @@ class Node:
 		if self.store.has_key(record.recordID) :
 			storeRecordHistory = self.store[record.recordID].lastSavedByHistory
 			if self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 2 :
-				print "There is a merge conflict!"
+				raise ValueError('Merge Conflict while integration')
 			elif self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 1  :
 				self.store[str(record.recordID)] = record
 			elif self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 0 \
@@ -346,7 +370,7 @@ class Node:
 				self.sessions[k].ongoingRequest = None
 			
 			elif request :
-				print "Request invalid!"
+				raise ValueError('Invalid Request!')
 
 
 	def pullInitiation (self, syncSessID, filter) :
