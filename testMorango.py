@@ -81,6 +81,20 @@ class Test(unittest.TestCase) :
 		self.assertEqual(node.store["record7"].lastSavedByHistory, {"A":7})
 
 
+	def test_deserialize(self) :
+        	node = Node("A")
+
+		#Add records to node's store
+		node.store["record1"] = StoreRecord("record1", "record1 data", "B", 1, {"B":1, "C":1}, Node.ALL, Node.ALL)
+
+		#Add appData 		
+		node.addAppData("record2", "record2 Data", Node.ALL, Node.ALL)		
+
+		node.deserialize()
+		self.assertEqual(len(node.appData), 2)
+		self.assertEqual(len(node.store), 1)
+		self.assertEqual(node.appData[1], ("record1", "record2 data", Node.ALL, Node.ALL))
+		
 	def test_eventualConsistencyRing(self) :
 		nodeList = []
 		ringSize = self.RINGSIZE
