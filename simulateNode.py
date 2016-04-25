@@ -53,9 +53,6 @@ class Node:
 		"""
 		Adding records to the application
 		"""
-		if len(recordID) == 0 :
-			raise ValueError('Length of recordID should be greater than 0')
-		
 		# Third argument is the dirty bit which will always be set for new data
 		self.appData.append((recordID, recordData, 1, partitionFacility, partitionUser))
 

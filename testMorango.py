@@ -13,8 +13,7 @@ class Test(unittest.TestCase) :
 
 
 	def test_emptyRecordID(self) :
-		node = Node("A")
-		self.assertRaises(ValueError, lambda: node.addAppData("","data","Facility1","UserX"))
+		self.assertRaises(ValueError, lambda: StoreRecord("","data","A",1,{},"Facility1", "UserX"))
 
 	def test_eventualConsistencyRing(self) :
 		nodeList = []

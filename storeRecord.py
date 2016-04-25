@@ -18,6 +18,8 @@ class StoreRecord:
 		"""
 		Constructor
 		"""
+		if len(recordID) == 0 :
+                        raise ValueError('Length of recordID should be greater than 0')
 		self.recordID = recordID
 		self.recordData = recordData
 		self.lastSavedByInstance = lastSavedByInstance
@@ -26,28 +28,38 @@ class StoreRecord:
 		self.partitionFacility = partitionFacility
 		self.partitionUser = partitionUser
 
+
 	def updateRecord (self, serializedData, instanceID, counter) :
+		"""
+		Input : record data, instanceID 
+		"""
 		if self.updateLastSavedByHistory(instanceID, count):
 			self.updateLastSavedByInstanceCounter(instanceID, count)
 			self.updateRecordData(serializedData)
 		else :
 			print "Outdated record Data"
+
 		
-	def updateRecordData(self, serializedData) :
-		self.recordData = serializedData
-
-
-	def updateLastSavedByInstanceCounter ( self, instanceID , count ) :
+	def updateRecordData(self, data) :
 		"""
-        	Lastest modification made to the record by instance with ID instanceID at counter position count
+		Changes replaces old record data with newly supplied data
+		"""
+		self.recordData = data
+
+
+	def updateLastSavedByInstanceCounter ( self, instanceID , counter ) :
+		"""
+        	Lastest modification made to the record by instance with instanceID at counter position
         	"""
 		self.lastSavedByInstance = instanceID
-		self.lastSavedByCounter = count
-		# make changes to lastSavedByHistory
-		self.updatelastSavedByHistory( instanceID, count)
+		self.lastSavedByCounter = counter
 
 
 	def updateLastSavedByHistory (self, instanceID, count) :
+		"""
+		Return False if record's lastSavedByHistory is up to date
+		Return True if modifictaion in lastSavedByHIstory is needed
+		"""
 		if self.lastSavedByHistory :
 			# Searching for the instance in lastSavedByHistory
 			if self.lastSavedByHistory.has_key(str(instanceID)) :
