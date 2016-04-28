@@ -110,6 +110,15 @@ class Test(unittest.TestCase) :
 		# Should throw an error because of merge conflict for record4 
 		self.assertRaises(ValueError, lambda:node.deserialize() )
 
+
+	def test_compareVectors(self) :
+        	node = Node("A")
+		self.assertEqual(node.compareVectors({"A":1},{"A":2}), 0)
+		self.assertEqual(node.compareVectors({"A":1},{"A":1, "B":2}), 0)
+		self.assertEqual(node.compareVectors({"A":4, "B":3},{"A":2}), 1)
+		self.assertEqual(node.compareVectors({"A":2, "B":3},{"A":2}), 1)
+		self.assertEqual(node.compareVectors({"A":2, "B":3},{"A":3}), 2)
+
 		
 	def test_eventualConsistencyRing(self) :
 		nodeList = []
@@ -305,18 +314,9 @@ class Test(unittest.TestCase) :
 		# B : record2, record3, record5, record6, record7
 		# C : record1, record2, record3, record4, record5, record6, record7 
 
-		#Checking if compareVectors is correct
-		self.assertEqual(nodeList[0].compareVectors({"A":1},{"A":2}), 0)
-		self.assertEqual(nodeList[0].compareVectors({"A":1},{"A":1, "B":2}), 0)
-		self.assertEqual(nodeList[0].compareVectors({"A":4, "B":3},{"A":2}), 1)
-		self.assertEqual(nodeList[0].compareVectors({"A":2, "B":3},{"A":2}), 1)
-		self.assertEqual(nodeList[0].compareVectors({"A":2, "B":3},{"A":3}), 2)
-		print nodeList[0].appData
 		nodeList[0].deserialize()
-		print nodeList[0].appData
-		print nodeList[1].appData
 		nodeList[1].deserialize()
-		print nodeList[1].appData
+		nodeList[2].deserialize()
 
 if __name__ == '__main__':
 	if len(sys.argv) > 1:
