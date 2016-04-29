@@ -80,17 +80,24 @@ class Node:
 		return superSet
 		
 
-	def giveMaxDict (self, dict1, dict2) :
+	def giveMaxDict (self, dicts) :
 		"""
-		Given 2 dictionaries returns a dictionary which contains union
-		of the 2. (for clashing keys, takes the maximum value)
+		Given 2 or more dictionaries returns a dictionary which contains union
+		of the all. (for clashing keys, takes the maximum value)
 		"""
-		result = deepcopy(dict1)
-		for k, v in dict2.items() :
-			if result.has_key(k) :
-				result[k] = max(result[k], dict2[k])
-			else :
-				result[k] = v
+		if len(dicts) == 0 :
+			return {}
+
+		elif len(dicts) == 1 :
+			return dicts[0]
+
+		result = deepcopy(dicts[0])
+		for i in range (1, len(dicts)) :
+			for k, v in dicts[i].items() :
+				if result.has_key(k) :
+					result[k] = max(result[k], dicts[i][k])
+				else :
+					result[k] = v
 		return result
 
 
@@ -302,6 +309,15 @@ class Node:
 		self.store[recordID].lastSavedByHistory = history
 
 
+	def bufferDataChosen(self, record)
+		recordIndex = self.searchRecordInApp(record.recordID)
+		storeRecordHistory = self.store[record.recordID].lastSavedByHistory
+
+		self.appData[recordIndex][1] = record.recordData
+		history = self.giveMaxDict([record.lastSavedByHistory, storeRecordHistory, {self.instanceID:self.counter}])
+		self.editRecordInStore( record.recordID, record.recordData, self.instanceID, self.counter, history)
+
+
 	def integrateRecord (self, record) :
 		"""
 		Integrate record stored in Incoming Buffer to the store and application
@@ -321,30 +337,27 @@ class Node:
 				if self.appData[i][2] == 0 :
 
 					storeRecordHistory = self.store[record.recordID].lastSavedByHistory
+					vectorComparison = self.compareVectors(storeRecordHistory, record.lastSavedByHistory)
 
-					if self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 2 :
+					# Merge conflict between incoming buffer record and store record
+					if vectorComparison == 2 :
 
+						self.incrementCounter()
 						if self.resolveMergeConflict(inflatedIncomingBufferRecord, self.appData[recordIndex]):
 							# Merge conflict resolution did not choose the app data
-							self.appData[recordIndex][1] = record.recordData
-							history = self.giveMaxDict(record.lastSavedByHistory, storeRecordHistory)
-							self.editRecordInStore( record.recordID, record.recordData, \
-								record.lastSavedByInstance, record.lastSavedByCounter, history)
+							self.bufferDataChosen(record)
 
 						else :
 							# Merge conflict resolution algorithm chose app data
-							self.store[record.recordID].lastSavedByHistory = self.mergeRecordHistories(\
+							self.store[record.recordID].lastSavedByHistory = self.giveMaxDict(\
 								record.lastSavedByHistory, storeRecordHistory)
- 
-					elif self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 0  :
-						self.appData[recordIndex][1] = record.recordData
-						history = self.giveMaxDict(record.lastSavedByHistory, storeRecordHistory)
-						self.editRecordInStore( record.recordID, record.recordData, \
-							record.lastSavedByInstance, record.lastSavedByCounter, history)
 
-					elif self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 1 \
-						or self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 3:
-						# Increase counter?	
+					#Chooses incoming buffer record 
+					elif vectorComparison == 0  :
+						self.bufferDataChosen(record)
+
+					# Application record is updated
+					elif vectorComparison == 1 or vectorComparison == 3:
 						return	
 
 					else :
