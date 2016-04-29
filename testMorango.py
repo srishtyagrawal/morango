@@ -217,12 +217,6 @@ class Test(unittest.TestCase) :
 		# Adding a record to a node A
 		nodeList[0].addAppData("record1","A version 1", Node.ALL, Node.ALL)
 		nodeList[0].serialize((Node.ALL, Node.ALL))
-		self.assertEqual(nodeList[0].store["record1"].lastSavedByInstance, "A")
-		self.assertEqual(nodeList[0].store["record1"].lastSavedByCounter, 1)
-		self.assertEqual(nodeList[0].store["record1"].lastSavedByHistory, {"A":1})
-		self.assertEqual(nodeList[0].store["record1"].partitionFacility, Node.ALL)
-		self.assertEqual(nodeList[0].store["record1"].partitionUser, Node.ALL)
-		self.assertEqual(nodeList[0].store["record1"].recordData, "A version 1")
 		
 		# Node A pushing data to Node B
 		sess0_1 = nodeList[0].createSyncSession(nodeList[1], "B")
@@ -274,7 +268,38 @@ class Test(unittest.TestCase) :
 		self.assertEqual(nodeList[2].store["record1"].partitionUser, Node.ALL)
 		self.assertEqual(nodeList[2].store["record1"].recordData, "B version 1")
 
+
+	def test_mergeConflict_scenario1(self) :
+		nodeList = []
+		for i in range (4):
+        		nodeList.append(Node( chr(i+65) ) )
+
+		# Adding a record to a node A
+		nodeList[0].addAppData("record1","A version 1", Node.ALL, Node.ALL)
+		nodeList[0].serialize((Node.ALL, Node.ALL))
 		
+		# Adding a record to a node B
+		nodeList[1].addAppData("record1","B version 1", Node.ALL, Node.ALL)
+		nodeList[1].serialize((Node.ALL, Node.ALL))
+
+		# Node A pushing data to Node C
+		sess0_2 = nodeList[0].createSyncSession(nodeList[2], "C")
+		nodeList[0].pushInitiation(sess0_2, (Node.ALL, Node.ALL))
+
+		# Node B pushing data to Node C
+		sess1_2 = nodeList[1].createSyncSession(nodeList[2], "C")
+		nodeList[1].pushInitiation(sess1_2, (Node.ALL, Node.ALL))
+
+		# Node B pushing data to Node D
+		sess1_3 = nodeList[1].createSyncSession(nodeList[3], "D")
+		nodeList[1].pushInitiation(sess1_3, (Node.ALL, Node.ALL))
+
+		# Node A pushing data to Node D
+		sess0_3 = nodeList[0].createSyncSession(nodeList[3], "D")
+		nodeList[0].pushInitiation(sess0_3, (Node.ALL, Node.ALL))
+		self.assertEqual(nodeList[2].store["record1"].recordData, nodeList[3].store["record1"].recordData)
+
+
 	def test_eventualConsistencyRing(self) :
 		nodeList = []
 		ringSize = self.RINGSIZE

@@ -298,7 +298,7 @@ class Node:
 		Not using data1 and application data currently to resolve conflict
 		Picking one of the values using hash values
 		"""
-		hashedData1 = hashlib.md5(data1.recordID).hexdigest()
+		hashedData1 = hashlib.md5(data1[0]).hexdigest()
 		hashedAppData = hashlib.md5(self.appData[indexInApp][0]).hexdigest()
 		if (hashedData1 > hashedAppData) :
 			return 0
@@ -353,10 +353,10 @@ class Node:
 
 			# Record exists in the application
 			if recordIndex >= 0 :
-				self.incrementCounter()
+				self.updateCounter()
 
 				# Dirty bit in the application is not set
-				if self.appData[i][2] == 0 :
+				if self.appData[recordIndex][2] == 0 :
 
 					storeRecordHistory = self.store[record.recordID].lastSavedByHistory
 					vectorComparison = self.compareVectors(storeRecordHistory, record.lastSavedByHistory)
@@ -364,7 +364,7 @@ class Node:
 					# Merge conflict between incoming buffer record and store record
 					if vectorComparison == 2 :
 
-						if self.resolveMergeConflict(inflatedIncomingBufferRecord, self.appData[recordIndex]):
+						if self.resolveMergeConflict(inflatedIncomingBufferRecord, recordIndex):
 							# Merge conflict resolution did not choose the app data
 							self.bufferDataChosen(record)
 
@@ -387,7 +387,7 @@ class Node:
 				else :
 					self.appData[recordIndex] = self.changeTuple(self.appData[recordIndex],2,0)
 					# Merge conflict resolution did not choose the app Data
-					if self.resolveMergeConflict(inflatedIncomingBufferRecord, self.appData[recordIndex]) :
+					if self.resolveMergeConflict(inflatedIncomingBufferRecord, recordIndex) :
 						self.bufferDataChosen(record)
 						 
 					# Merge conflict resolution chose the app Data
@@ -402,14 +402,14 @@ class Node:
 		else :
 			# Record exists in the application
 			if recordIndex >= 0 :
-				self.incrementCounter()
+				self.updateCounter()
 
 				if self.appData[i][2] == 0 :
 					raise ValueError('Data not present in Store but present in Application!')
 
 				else :
 					# Does not choose app Data
-					if self.resolveMergeConflict(inflatedIncomingBufferRecord, self.appData[recordIndex]) :
+					if self.resolveMergeConflict(inflatedIncomingBufferRecord, recordIndex) :
 						self.store[record.recordID] = record 
 						self.bufferDataChosen(record)
 
