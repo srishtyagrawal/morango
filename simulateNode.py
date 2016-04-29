@@ -377,7 +377,12 @@ class Node:
 				else :
 					# Merge conflict resolution did not choose the app Data
 					if self.resolveMergeConflict(inflatedIncomingBufferRecord, self.appData[recordIndex]) :
-						#????????????????????????????
+						self.appData[recordIndex][1] = record.recordData 
+						self.appData[recordIndex][2] = 0
+						history = self.giveMaxDict(storeRecordHistory, record.lastSavedByHistory)
+						self.editRecordInStore(record.recordID, record.recordData, record.lastSavedByInstance\
+							,record.lastSavedByCounter, history)
+						 
 
 					# Merge conflict resolution chose the app Data
 					else :
