@@ -80,6 +80,20 @@ class Node:
 		return superSet
 		
 
+	def giveMaxDict (self, dict1, dict2) :
+		"""
+		Given 2 dictionaries returns a dictionary which contains union
+		of the 2. (for clashing keys, takes the maximum value)
+		"""
+		result = deepcopy(dict1)
+		for k, v in dict2.items() :
+			if result.has_key(k) :
+				result[k] = max(result[k], dict2[k])
+			else :
+				result[k] = v
+		return result
+
+
 	def calcFSIC (self, filter ) :
 		"""
 		Given a filter(f), finds out maximum counter per instance for all 
@@ -90,17 +104,7 @@ class Node:
 		
 		fsic = {}
 		for i in superSetFilters :
-			if len(fsic) :
-				for k, v in self.syncDataStructure[i].items() :
-					# Currently built FSIC contains this instance-counter pair
-					if fsic.has_key(k):
-						fsic[k] = max(v, fsic[k])
-					# Currently built FSIC does not contain this instance-counter pair
-					else :
-						fsic[k] = v
-			# instance-counter pairs being added to FSIC for the first time
-			else :
-				fsic = deepcopy(self.syncDataStructure[i])
+			fsic = self.giveMaxDict(fsic, self.syncDataStructure[i])
 		return fsic
 
 
@@ -314,24 +318,27 @@ class Node:
 			record.partitionUser)
 
 
-	def mergeRecordHistories( self, history1, history2) :
+	def editRecordInStore (self, recordID, recordData, instanceID, counter, history) :
+		self.store[recordID].recordData = recordData
+		self.store[recordID].lastSavedByInstance = instanceID 
+		self.store[recordID].lastSavedByCounter = counter
+		self.store[recordID].lastSavedByHistory = history
 
-	
 
 	def integrateRecord (self, record) :
 		"""
 		Integrate record stored in Incoming Buffer to the store and application
 		"""
+
+		inflatedIncomingBufferRecord = self.inflateRecord(record)
+		# Checking if record exists in the application
+		recordIndex = self.searchRecordInApp(record.recordID)
+
 		# If record exists in store
 		if self.store.has_key(record.recordID) :
 
-			# Checking if record exists in the application
-			recordIndex = self.searchRecordInApp(record.recordID)
-
 			# Record exists in the application
 			if recordIndex >= 0 :
-
-				inflatedIncomingBufferRecord = self.inflateRecord(record)
 
 				# Dirty bit in the application is not set
 				if self.appData[i][2] == 0 :
@@ -343,11 +350,9 @@ class Node:
 						if self.resolveMergeConflict(inflatedIncomingBufferRecord, self.appData[recordIndex]):
 							# Merge conflict resolution did not choose the app data
 							self.appData[recordIndex][1] = record.recordData
-							self.store[record.recordID].recordData = record.recordData
-							self.store[record.recordID].lastSavedByInstance = record.lastSavedByInstance 
-							self.store[record.recordID].lastSavedByCounter = record.lastSavedByCounter
-							self.store[record.recordID].lastSavedByHistory = self.mergeRecordHistories(\
-								record.lastSavedByHistory, storeRecordHistory) 
+							history = self.giveMaxDict(record.lastSavedByHistory, storeRecordHistory)
+							self.editRecordInStore( record.recordID, record.recordData, \
+								record.lastSavedByInstance, record.lastSavedByCounter, history)
 
 						else :
 							# Merge conflict resolution algorithm chose app data
@@ -356,11 +361,9 @@ class Node:
  
 					elif self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 0  :
 						self.appData[recordIndex][1] = record.recordData
-						self.store[record.recordID].recordData = record.recordData
-						self.store[record.recordID].lastSavedByInstance = record.lastSavedByInstance 
-						self.store[record.recordID].lastSavedByCounter = record.lastSavedByCounter
-						self.store[record.recordID].lastSavedByHistory = self.mergeRecordHistories(\
-							record.lastSavedByHistory, storeRecordHistory) 
+						history = self.giveMaxDict(record.lastSavedByHistory, storeRecordHistory)
+						self.editRecordInStore( record.recordID, record.recordData, \
+							record.lastSavedByInstance, record.lastSavedByCounter, history)
 
 					elif self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 1 \
 						or self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 3:
@@ -391,18 +394,29 @@ class Node:
 	
 		# Record does not exist in the store
 		else :
-			recordIndex = self.searchRecordInApp(record.recordID)
 			# Record exists in the application
 			if recordIndex >= 0 :
 				if self.appData[i][2] == 0 :
 					raise ValueError('Data not present in Store but present in Application!')
 				else :
-					self.resolveMergeConflict()
+					# Does not choose app Data
+					if self.resolveMergeConflict(inflatedIncomingBufferRecord, self.appData[recordIndex]) :
+						self.appData[recordIndex] = inflatedIncomingBufferRecord
+						self.store[record.recordID] = record 
+
+					# Chooses app Data
+					else :
+						appRecord = self.appData[recordIndex]
+						self.incrementCounter()
+						self.appData[recordIndex][2] = 0
+						history = self.giveMaxDict(record.lastSavedByHistory, {self.instanceID : self.counter})
+						newRecord = StoreRecord(appRecord[0], appRecord[1], self.instanceID, self.counter,\
+							history, appRecord[3], appRecord[4])
+						self.store[record.recordID] = newRecord
 						
 			# Record does not exist in the application
-			else :		
-				self.appData.append((record.recordID, record.recordData, 0,\
-					record.partitionFacility, record.partitionUser))
+			else :	
+				self.appData.append(self.inflateRecord(record))
 				self.store[str(record.recordID)] = record
 	
 
