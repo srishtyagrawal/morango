@@ -111,7 +111,7 @@ class Node:
 		
 		fsic = {}
 		for i in superSetFilters :
-			fsic = self.giveMaxDict(fsic, self.syncDataStructure[i])
+			fsic = self.giveMaxDict([fsic, self.syncDataStructure[i]])
 		return fsic
 
 
