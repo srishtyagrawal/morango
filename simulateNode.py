@@ -309,13 +309,20 @@ class Node:
 		self.store[recordID].lastSavedByHistory = history
 
 
-	def bufferDataChosen(self, record)
+	def bufferDataChosen(self, record) :
 		recordIndex = self.searchRecordInApp(record.recordID)
 		storeRecordHistory = self.store[record.recordID].lastSavedByHistory
 
 		self.appData[recordIndex][1] = record.recordData
 		history = self.giveMaxDict([record.lastSavedByHistory, storeRecordHistory, {self.instanceID:self.counter}])
 		self.editRecordInStore( record.recordID, record.recordData, self.instanceID, self.counter, history)
+
+	def appDataChosen (self, record) :
+		recordIndex = self.searchRecordInApp(record.recordID)
+		storeRecordHistory = self.store[record.recordID].lastSavedByHistory
+
+		history = self.giveMaxDict([record.lastSavedByHistory, storeRecordHistory, {self.instanceID:self.counter}])
+		self.editRecordInStore( record.recordID, self.appData[recordIndex][1], self.instanceID, self.counter, history)
 
 
 	def integrateRecord (self, record) :
@@ -332,6 +339,7 @@ class Node:
 
 			# Record exists in the application
 			if recordIndex >= 0 :
+				self.incrementCounter()
 
 				# Dirty bit in the application is not set
 				if self.appData[i][2] == 0 :
@@ -342,15 +350,13 @@ class Node:
 					# Merge conflict between incoming buffer record and store record
 					if vectorComparison == 2 :
 
-						self.incrementCounter()
 						if self.resolveMergeConflict(inflatedIncomingBufferRecord, self.appData[recordIndex]):
 							# Merge conflict resolution did not choose the app data
 							self.bufferDataChosen(record)
 
 						else :
 							# Merge conflict resolution algorithm chose app data
-							self.store[record.recordID].lastSavedByHistory = self.giveMaxDict(\
-								record.lastSavedByHistory, storeRecordHistory)
+							self.appDataChosen(record)
 
 					#Chooses incoming buffer record 
 					elif vectorComparison == 0  :
@@ -358,31 +364,22 @@ class Node:
 
 					# Application record is updated
 					elif vectorComparison == 1 or vectorComparison == 3:
-						return	
+						self.appDataChosen(record)
 
 					else :
 						raise ValueError ("Invalid return from compare vector method!")
 
 				# Dirty bit for the record is set
 				else :
+					self.appData[recordIndex][2] = 0
 					# Merge conflict resolution did not choose the app Data
 					if self.resolveMergeConflict(inflatedIncomingBufferRecord, self.appData[recordIndex]) :
-						self.appData[recordIndex][1] = record.recordData 
-						self.appData[recordIndex][2] = 0
-						history = self.giveMaxDict(storeRecordHistory, record.lastSavedByHistory)
-						self.editRecordInStore(record.recordID, record.recordData, record.lastSavedByInstance\
-							,record.lastSavedByCounter, history)
+						self.bufferDataChosen(record)
 						 
-
 					# Merge conflict resolution chose the app Data
 					else :
-						self.incrementCounter()
-						mergedHistory = self.mergedRecordHistory(record.lastSavedByHistory, \
-							{self.instanceID:self.counter})
-						newRecord = StoreRecord(self.appData[recordIndex][0], self.appData[recordIndex][1],\
-							self.instanceID, self.counter,mergedHistory , self.appData[recordIndex][3], \
-							self.appData[recordIndex][4])
-						self.store[record.recordID] = newRecord	
+						self.appDataChosen(record)
+
 			# Record does not exist in the application
 			else :
 				raise ValueError('Record exists in store but not in application!')
@@ -391,23 +388,22 @@ class Node:
 		else :
 			# Record exists in the application
 			if recordIndex >= 0 :
+				self.incrementCounter()
+
 				if self.appData[i][2] == 0 :
 					raise ValueError('Data not present in Store but present in Application!')
+
 				else :
 					# Does not choose app Data
 					if self.resolveMergeConflict(inflatedIncomingBufferRecord, self.appData[recordIndex]) :
-						self.appData[recordIndex] = inflatedIncomingBufferRecord
 						self.store[record.recordID] = record 
+						self.bufferDataChosen(record)
 
 					# Chooses app Data
 					else :
-						appRecord = self.appData[recordIndex]
-						self.incrementCounter()
 						self.appData[recordIndex][2] = 0
-						history = self.giveMaxDict(record.lastSavedByHistory, {self.instanceID : self.counter})
-						newRecord = StoreRecord(appRecord[0], appRecord[1], self.instanceID, self.counter,\
-							history, appRecord[3], appRecord[4])
-						self.store[record.recordID] = newRecord
+						self.store[record.recordID] = record 
+						self.appDataChosen(record)
 						
 			# Record does not exist in the application
 			else :	
