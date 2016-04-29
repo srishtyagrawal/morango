@@ -1,6 +1,7 @@
 from storeRecord import StoreRecord
 from syncSession import SyncSession
 from copy import deepcopy
+import random
 import hashlib
 
 class Node:
@@ -207,9 +208,16 @@ class Node:
 				self.syncDataStructure[Node.ALL + "+" + Node.ALL][str(self.instanceID)] = self.counter
 
 
-	def deserialize(self) :
+	def searchRecordInApp (self, recordID):
+		for i in range(len(self.appData)) :
+			if self.appData[i][0] == recordID :
+				return i
+		return -1 
+			
+
+	def deserialize(self, record) :
 		"""
-		Convert records in store to application data
+		Inflate a record supplied either by Store or Incoming Buffer
 		"""
 		for key,value in self.store.items() :
 			# flag used to avoid duplication as appData is list and not dictionary
@@ -283,25 +291,119 @@ class Node:
 			return 2
 
 
+	def resolveMergeConflict(self, data1, indexInApp) :
+		"""
+		Not using data1 and application data currently to resolve conflict
+		Picking one of the values using hash values
+		"""
+		hashedData1 = hashlib.md5(data1.recordID).hexdigest()
+		hashedAppData = hashlib.md5(self.appData[indexInApp][0]).hexdigest()
+		if (hashedData1 > hashedAppData) :
+			return 0
+		else :
+			return 1
+		
+	
+	def inflateRecord ( self, record) :
+		"""
+		Convert a storeRecord to an application record
+		Not adding the record to appData yet
+		"""
+		# Dirty bit is turned off by default
+		return (record.recordID, record.recordData, 0, record.partitionFacility, \
+			record.partitionUser)
+
+
+	def mergeRecordHistories( self, history1, history2) :
+
+	
+
 	def integrateRecord (self, record) :
 		"""
-		Integrate record stored in Incoming Buffer to the store
+		Integrate record stored in Incoming Buffer to the store and application
 		"""
-		# If record exists in store check for merge-conflicts/fast-forward
+		# If record exists in store
 		if self.store.has_key(record.recordID) :
-			storeRecordHistory = self.store[record.recordID].lastSavedByHistory
-			if self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 2 :
-				raise ValueError('Merge Conflict while integration')
-			elif self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 1  :
-				self.store[str(record.recordID)] = record
-			elif self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 0 \
-				or self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 3:
-				return		
+
+			# Checking if record exists in the application
+			recordIndex = self.searchRecordInApp(record.recordID)
+
+			# Record exists in the application
+			if recordIndex >= 0 :
+
+				inflatedIncomingBufferRecord = self.inflateRecord(record)
+
+				# Dirty bit in the application is not set
+				if self.appData[i][2] == 0 :
+
+					storeRecordHistory = self.store[record.recordID].lastSavedByHistory
+
+					if self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 2 :
+
+						if self.resolveMergeConflict(inflatedIncomingBufferRecord, self.appData[recordIndex]):
+							# Merge conflict resolution did not choose the app data
+							self.appData[recordIndex][1] = record.recordData
+							self.store[record.recordID].recordData = record.recordData
+							self.store[record.recordID].lastSavedByInstance = record.lastSavedByInstance 
+							self.store[record.recordID].lastSavedByCounter = record.lastSavedByCounter
+							self.store[record.recordID].lastSavedByHistory = self.mergeRecordHistories(\
+								record.lastSavedByHistory, storeRecordHistory) 
+
+						else :
+							# Merge conflict resolution algorithm chose app data
+							self.store[record.recordID].lastSavedByHistory = self.mergeRecordHistories(\
+								record.lastSavedByHistory, storeRecordHistory)
+ 
+					elif self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 0  :
+						self.appData[recordIndex][1] = record.recordData
+						self.store[record.recordID].recordData = record.recordData
+						self.store[record.recordID].lastSavedByInstance = record.lastSavedByInstance 
+						self.store[record.recordID].lastSavedByCounter = record.lastSavedByCounter
+						self.store[record.recordID].lastSavedByHistory = self.mergeRecordHistories(\
+							record.lastSavedByHistory, storeRecordHistory) 
+
+					elif self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 1 \
+						or self.compareVectors(storeRecordHistory, record.lastSavedByHistory) == 3:
+						# Increase counter?	
+						return	
+
+					else :
+						raise ValueError ("Invalid return from compare vector method!")
+
+				# Dirty bit for the record is set
+				else :
+					# Merge conflict resolution did not choose the app Data
+					if self.resolveMergeConflict(inflatedIncomingBufferRecord, self.appData[recordIndex]) :
+						#????????????????????????????
+
+					# Merge conflict resolution chose the app Data
+					else :
+						self.incrementCounter()
+						mergedHistory = self.mergedRecordHistory(record.lastSavedByHistory, \
+							{self.instanceID:self.counter})
+						newRecord = StoreRecord(self.appData[recordIndex][0], self.appData[recordIndex][1],\
+							self.instanceID, self.counter,mergedHistory , self.appData[recordIndex][3], \
+							self.appData[recordIndex][4])
+						self.store[record.recordID] = newRecord	
+			# Record does not exist in the application
 			else :
-				raise ValueError ("Invalid return from compare vector method!")
-		# Record does not exist in the store, add it
+				raise ValueError('Record exists in store but not in application!')
+	
+		# Record does not exist in the store
 		else :
-			self.store[str(record.recordID)] = record
+			recordIndex = self.searchRecordInApp(record.recordID)
+			# Record exists in the application
+			if recordIndex >= 0 :
+				if self.appData[i][2] == 0 :
+					raise ValueError('Data not present in Store but present in Application!')
+				else :
+					self.resolveMergeConflict()
+						
+			# Record does not exist in the application
+			else :		
+				self.appData.append((record.recordID, record.recordData, 0,\
+					record.partitionFacility, record.partitionUser))
+				self.store[str(record.recordID)] = record
 	
 
 	def fsicDiffAndSnapshot ( self, filter, receivedFSIC ) :
