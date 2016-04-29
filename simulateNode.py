@@ -60,6 +60,11 @@ class Node:
 				return i
 		return -1 
 
+	def changeTuple (self, tupleOld, index, value) :
+		tupleNew = list(tupleOld)
+		tupleNew[index] = value
+		return tuple(tupleNew)
+
 
 	def addAppData ( self, recordID, recordData, partitionFacility, partitionUser) :
 		"""
@@ -67,7 +72,8 @@ class Node:
 		"""
 		recordIndex = self.searchRecordInApp(recordID)
 		if recordIndex >= 0 :
-			self.appData[recordIndex][1] = recordData
+			self.appData[recordIndex] = self.changeTuple(self.appData[recordIndex], 1, recordData)
+			self.appData[recordIndex] = self.changeTuple(self.appData[recordIndex], 2,  1)
 		else :		
 			# Third argument is the dirty bit which will always be set for new data
 			self.appData.append((recordID, recordData, 1, partitionFacility, partitionUser))
@@ -321,7 +327,7 @@ class Node:
 		recordIndex = self.searchRecordInApp(record.recordID)
 		storeRecordHistory = self.store[record.recordID].lastSavedByHistory
 
-		self.appData[recordIndex][1] = record.recordData
+		self.appData[recordIndex] = self.changeTuple(self.appData[recordIndex],1,record.recordData)
 		history = self.giveMaxDict([record.lastSavedByHistory, storeRecordHistory, {self.instanceID:self.counter}])
 		self.editRecordInStore( record.recordID, record.recordData, self.instanceID, self.counter, history)
 
@@ -379,7 +385,7 @@ class Node:
 
 				# Dirty bit for the record is set
 				else :
-					self.appData[recordIndex][2] = 0
+					self.appData[recordIndex] = self.changeTuple(self.appData[recordIndex],2,0)
 					# Merge conflict resolution did not choose the app Data
 					if self.resolveMergeConflict(inflatedIncomingBufferRecord, self.appData[recordIndex]) :
 						self.bufferDataChosen(record)
@@ -409,7 +415,7 @@ class Node:
 
 					# Chooses app Data
 					else :
-						self.appData[recordIndex][2] = 0
+						self.appData[recordIndex] = self.changeTuple(self.appData[recordIndex],2,0)
 						self.store[record.recordID] = record 
 						self.appDataChosen(record)
 						
