@@ -217,31 +217,8 @@ class Node:
 			if self.appData[i][0] == recordID :
 				return i
 		return -1 
-			
-
-	def deserialize(self, record) :
-		"""
-		Inflate a record supplied either by Store or Incoming Buffer
-		"""
-		for key,value in self.store.items() :
-			# flag used to avoid duplication as appData is list and not dictionary
-			flag = 0
-			for i in range (len(self.appData)):
-				# record exists in the application
-				if self.appData[i][0] == key :
-					flag = 1
-					# If dirty bit is set then new changes were made 
-					if self.appData[i][2] == 1 :
-						raise ValueError('Merge Conflict while derializing data')
-					# If dirty bit is not set, then overwrite the data 
-					else :
-						self.appData[i] = (key, value.recordData, 0, value.partitionFacility,\
-							value.partitionUser)	
-			# If the recordID does not exist in the application
-			if flag == 0 :
-				self.appData.append((key, value.recordData, 0, value.partitionFacility, value.partitionUser))
-			
-
+	
+		
 	def integrate ( self ) :
 		for key, value in self.incomingBuffer.items() :
 			for i in value[1][1] :
