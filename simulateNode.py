@@ -50,12 +50,27 @@ class Node:
 		self.counter = self.counter + 1
 
 
+	def searchRecordInApp (self, recordID):
+		"""
+		Returns index of the record in appData if it exists, 
+		-1 otherwise
+		"""
+		for i in range(len(self.appData)) :
+			if self.appData[i][0] == recordID :
+				return i
+		return -1 
+
+
 	def addAppData ( self, recordID, recordData, partitionFacility, partitionUser) :
 		"""
 		Adding records to the application
 		"""
-		# Third argument is the dirty bit which will always be set for new data
-		self.appData.append((recordID, recordData, 1, partitionFacility, partitionUser))
+		recordIndex = self.searchRecordInApp(recordID)
+		if recordIndex >= 0 :
+			self.appData[recordIndex][1] = recordData
+		else :		
+			# Third argument is the dirty bit which will always be set for new data
+			self.appData.append((recordID, recordData, 1, partitionFacility, partitionUser))
 
 
 	def superSetFilters ( self, filter ) :
@@ -149,7 +164,7 @@ class Node:
 		return False
 
 
-	def findRecordInStore ( self, instanceID, counterLow, counterHigh, partitionFacility, partitionUser ) :
+	def searchRecordInStore ( self, instanceID, counterLow, counterHigh, partitionFacility, partitionUser ) :
 		records = []
 		for key, value in self.store.items() :
 			recordCounter = value.lastSavedByCounter
@@ -174,11 +189,11 @@ class Node:
 		for key,value in fsic1.items() :
 			if fsic2.has_key(key): 
 				if fsic2[key] < fsic1[key]:
-					records = records + self.findRecordInStore(key, fsic2[key]+1, \
+					records = records + self.searchRecordInStore(key, fsic2[key]+1, \
 						fsic1[key]+1, partFacility, partUser)
 					changes[key] = fsic1[key]
 			else :
-				records = records + self.findRecordInStore(key, 1, value+1, partFacility, partUser)
+				records = records + self.searchRecordInStore(key, 1, value+1, partFacility, partUser)
 				changes[key] = value
 		return (changes, records)
 
@@ -217,13 +232,6 @@ class Node:
 				self.appData[i] = self.appData[i][:2] + (0,) + tuple(self.appData[i][-2])
 				# Making changes to Sync Data Structure 
 				self.syncDataStructure[Node.ALL + "+" + Node.ALL][str(self.instanceID)] = self.counter
-
-
-	def searchRecordInApp (self, recordID):
-		for i in range(len(self.appData)) :
-			if self.appData[i][0] == recordID :
-				return i
-		return -1 
 	
 		
 	def integrate ( self ) :
