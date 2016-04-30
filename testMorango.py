@@ -82,12 +82,12 @@ class Test(unittest.TestCase) :
 
 
 	def test_compareVectors(self) :
-        	node = Node("A")
-		self.assertEqual(node.compareVectors({"A":1},{"A":2}), 0)
-		self.assertEqual(node.compareVectors({"A":1},{"A":1, "B":2}), 0)
-		self.assertEqual(node.compareVectors({"A":4, "B":3},{"A":2}), 1)
-		self.assertEqual(node.compareVectors({"A":2, "B":3},{"A":2}), 1)
-		self.assertEqual(node.compareVectors({"A":2, "B":3},{"A":3}), 2)
+        	n = Node("A")
+		self.assertEqual(n.compareVectors({"A":1},{"A":2}), 0)
+		self.assertEqual(n.compareVectors({"A":1},{"A":1, "B":2}), 0)
+		self.assertEqual(n.compareVectors({"A":4, "B":3},{"A":2}), 1)
+		self.assertEqual(n.compareVectors({"A":2, "B":3},{"A":2}), 1)
+		self.assertEqual(n.compareVectors({"A":2, "B":3},{"A":3}), 2)
 
 
 	def test_scenario1(self) :
@@ -210,94 +210,106 @@ class Test(unittest.TestCase) :
 
 
 	def test_fast_forward_scenario1 (self) :
-		nodeList = []
+		m = []
 		for i in range (3):
-        		nodeList.append(Node( chr(i+65) ) )
+        		m.append(Node( chr(i+65) ) )
 
 		# Adding a record to a node A
-		nodeList[0].addAppData("record1","A version 1", Node.ALL, Node.ALL)
-		nodeList[0].serialize((Node.ALL, Node.ALL))
+		m[0].addAppData("record1","A version 1", Node.ALL, Node.ALL)
+		m[0].serialize((Node.ALL, Node.ALL))
 		
 		# Node A pushing data to Node B
-		sess0_1 = nodeList[0].createSyncSession(nodeList[1], "B")
-		nodeList[0].pushInitiation(sess0_1, (Node.ALL, Node.ALL))
-		self.assertEqual(nodeList[1].store["record1"].lastSavedByInstance, "A")
-		self.assertEqual(nodeList[1].store["record1"].lastSavedByCounter, 1)
-		self.assertEqual(nodeList[1].store["record1"].lastSavedByHistory, {"A":1})
-		self.assertEqual(nodeList[1].store["record1"].partitionFacility, Node.ALL)
-		self.assertEqual(nodeList[1].store["record1"].partitionUser, Node.ALL)
-		self.assertEqual(nodeList[1].store["record1"].recordData, "A version 1")
+		sess0_1 = m[0].createSyncSession(m[1], "B")
+		m[0].pushInitiation(sess0_1, (Node.ALL, Node.ALL))
+		self.assertEqual(m[1].store["record1"].lastSavedByInstance, "A")
+		self.assertEqual(m[1].store["record1"].lastSavedByCounter, 1)
+		self.assertEqual(m[1].store["record1"].lastSavedByHistory, {"A":1})
+		self.assertEqual(m[1].store["record1"].partitionFacility, Node.ALL)
+		self.assertEqual(m[1].store["record1"].partitionUser, Node.ALL)
+		self.assertEqual(m[1].store["record1"].recordData, "A version 1")
 
-		recordIndex = nodeList[1].searchRecordInApp("record1")	
-		self.assertEqual(nodeList[1].appData[recordIndex][1], "A version 1")
-		self.assertEqual(nodeList[1].appData[recordIndex][2], 0)
-		self.assertEqual(nodeList[1].appData[recordIndex][3], Node.ALL)
-		self.assertEqual(nodeList[1].appData[recordIndex][4], Node.ALL)
+		recordIndex = m[1].searchRecordInApp("record1")	
+		self.assertEqual(m[1].appData[recordIndex][1], "A version 1")
+		self.assertEqual(m[1].appData[recordIndex][2], 0)
+		self.assertEqual(m[1].appData[recordIndex][3], Node.ALL)
+		self.assertEqual(m[1].appData[recordIndex][4], Node.ALL)
 
 		# Node B now modifies this data
-		nodeList[1].addAppData("record1","B version 1", Node.ALL, Node.ALL)
-		self.assertEqual(nodeList[1].appData[recordIndex][1], "B version 1")
-		self.assertEqual(nodeList[1].appData[recordIndex][2], 1)
+		m[1].addAppData("record1","B version 1", Node.ALL, Node.ALL)
+		self.assertEqual(m[1].appData[recordIndex][1], "B version 1")
+		self.assertEqual(m[1].appData[recordIndex][2], 1)
 
-		nodeList[1].serialize((Node.ALL, Node.ALL))
-		self.assertEqual(nodeList[1].appData[recordIndex][2], 0)
-		self.assertEqual(nodeList[1].store["record1"].lastSavedByInstance, "B")
-		self.assertEqual(nodeList[1].store["record1"].lastSavedByCounter, 1)
-		self.assertEqual(nodeList[1].store["record1"].lastSavedByHistory, {"A":1, "B":1})
-		self.assertEqual(nodeList[1].store["record1"].partitionFacility, Node.ALL)
-		self.assertEqual(nodeList[1].store["record1"].partitionUser, Node.ALL)
-		self.assertEqual(nodeList[1].store["record1"].recordData, "B version 1")
+		m[1].serialize((Node.ALL, Node.ALL))
+		self.assertEqual(m[1].appData[recordIndex][2], 0)
+		self.assertEqual(m[1].store["record1"].lastSavedByInstance, "B")
+		self.assertEqual(m[1].store["record1"].lastSavedByCounter, 1)
+		self.assertEqual(m[1].store["record1"].lastSavedByHistory, {"A":1, "B":1})
+		self.assertEqual(m[1].store["record1"].partitionFacility, Node.ALL)
+		self.assertEqual(m[1].store["record1"].partitionUser, Node.ALL)
+		self.assertEqual(m[1].store["record1"].recordData, "B version 1")
 
 		# Node B pushing data to Node C
-		sess1_2 = nodeList[1].createSyncSession(nodeList[2], "C")
-		nodeList[1].pushInitiation(sess1_2, (Node.ALL, Node.ALL))
-		self.assertEqual(nodeList[2].store["record1"].lastSavedByInstance, "B")
-		self.assertEqual(nodeList[2].store["record1"].lastSavedByCounter, 1)
-		self.assertEqual(nodeList[2].store["record1"].lastSavedByHistory, {"A":1, "B":1})
-		self.assertEqual(nodeList[2].store["record1"].partitionFacility, Node.ALL)
-		self.assertEqual(nodeList[2].store["record1"].partitionUser, Node.ALL)
-		self.assertEqual(nodeList[2].store["record1"].recordData, "B version 1")
+		sess1_2 = m[1].createSyncSession(m[2], "C")
+		m[1].pushInitiation(sess1_2, (Node.ALL, Node.ALL))
+		self.assertEqual(m[2].store["record1"].lastSavedByInstance, "B")
+		self.assertEqual(m[2].store["record1"].lastSavedByCounter, 1)
+		self.assertEqual(m[2].store["record1"].lastSavedByHistory, {"A":1, "B":1})
+		self.assertEqual(m[2].store["record1"].partitionFacility, Node.ALL)
+		self.assertEqual(m[2].store["record1"].partitionUser, Node.ALL)
+		self.assertEqual(m[2].store["record1"].recordData, "B version 1")
 
 		# Node A pushing data to Node C
-		sess0_2 = nodeList[0].createSyncSession(nodeList[2], "C")
-		nodeList[0].pushInitiation(sess0_2, (Node.ALL, Node.ALL))
-		self.assertEqual(nodeList[2].store["record1"].lastSavedByInstance, "B")
-		self.assertEqual(nodeList[2].store["record1"].lastSavedByCounter, 1)
-		self.assertEqual(nodeList[2].store["record1"].lastSavedByHistory, {"A":1, "B":1})
-		self.assertEqual(nodeList[2].store["record1"].partitionFacility, Node.ALL)
-		self.assertEqual(nodeList[2].store["record1"].partitionUser, Node.ALL)
-		self.assertEqual(nodeList[2].store["record1"].recordData, "B version 1")
+		sess0_2 = m[0].createSyncSession(m[2], "C")
+		m[0].pushInitiation(sess0_2, (Node.ALL, Node.ALL))
+		self.assertEqual(m[2].store["record1"].lastSavedByInstance, "B")
+		self.assertEqual(m[2].store["record1"].lastSavedByCounter, 1)
+		self.assertEqual(m[2].store["record1"].lastSavedByHistory, {"A":1, "B":1})
+		self.assertEqual(m[2].store["record1"].partitionFacility, Node.ALL)
+		self.assertEqual(m[2].store["record1"].partitionUser, Node.ALL)
+		self.assertEqual(m[2].store["record1"].recordData, "B version 1")
 
 
 	def test_mergeConflict_scenario1(self) :
-		nodeList = []
+		p = []
 		for i in range (4):
-        		nodeList.append(Node( chr(i+65) ) )
+        		p.append(Node( chr(i+65) ) )
 
 		# Adding a record to a node A
-		nodeList[0].addAppData("record1","A version 1", Node.ALL, Node.ALL)
-		nodeList[0].serialize((Node.ALL, Node.ALL))
+		p[0].addAppData("record1","A version 1", Node.ALL, Node.ALL)
+		p[0].serialize((Node.ALL, Node.ALL))
+		self.assertEqual(p[0].store["record1"].lastSavedByHistory, {"A":1})
 		
 		# Adding a record to a node B
-		nodeList[1].addAppData("record1","B version 1", Node.ALL, Node.ALL)
-		nodeList[1].serialize((Node.ALL, Node.ALL))
+		p[1].addAppData("record1","B version 1", Node.ALL, Node.ALL)
+		p[1].serialize((Node.ALL, Node.ALL))
+		self.assertEqual(p[1].store["record1"].lastSavedByHistory, {"B":1})
 
 		# Node A pushing data to Node C
-		sess0_2 = nodeList[0].createSyncSession(nodeList[2], "C")
-		nodeList[0].pushInitiation(sess0_2, (Node.ALL, Node.ALL))
+		sess0_2 = p[0].createSyncSession(p[2], "C")
+		p[0].pushInitiation(sess0_2, (Node.ALL, Node.ALL))
+		self.assertEqual(p[2].store["record1"].lastSavedByHistory, {"A":1})
 
 		# Node B pushing data to Node C
-		sess1_2 = nodeList[1].createSyncSession(nodeList[2], "C")
-		nodeList[1].pushInitiation(sess1_2, (Node.ALL, Node.ALL))
+		sess1_2 = p[1].createSyncSession(p[2], "C")
+		p[1].pushInitiation(sess1_2, (Node.ALL, Node.ALL))
+		self.assertEqual(p[2].store["record1"].lastSavedByHistory, {"A":1,"B":1,"C":1})
+
 
 		# Node B pushing data to Node D
-		sess1_3 = nodeList[1].createSyncSession(nodeList[3], "D")
-		nodeList[1].pushInitiation(sess1_3, (Node.ALL, Node.ALL))
+		sess1_3 = p[1].createSyncSession(p[3], "D")
+		p[1].pushInitiation(sess1_3, (Node.ALL, Node.ALL))
+		self.assertEqual(p[3].store["record1"].lastSavedByHistory, {"B":1})
 
 		# Node A pushing data to Node D
-		sess0_3 = nodeList[0].createSyncSession(nodeList[3], "D")
-		nodeList[0].pushInitiation(sess0_3, (Node.ALL, Node.ALL))
-		self.assertEqual(nodeList[2].store["record1"].recordData, nodeList[3].store["record1"].recordData)
+		sess0_3 = p[0].createSyncSession(p[3], "D")
+		p[0].pushInitiation(sess0_3, (Node.ALL, Node.ALL))
+		self.assertEqual(p[3].store["record1"].lastSavedByInstance, "D")
+		self.assertEqual(p[3].store["record1"].lastSavedByHistory, {"B":1, "A":1, "D":1})
+		self.assertEqual(p[2].store["record1"].recordData, p[3].store["record1"].recordData)
+
+		# Node C pushing data to Node D
+		sess2_3 = p[2].createSyncSession(p[3], "D")
+		p[2].pushInitiation(sess2_3, (Node.ALL, Node.ALL))
 
 
 	def test_eventualConsistencyRing(self) :

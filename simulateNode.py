@@ -298,8 +298,8 @@ class Node:
 		Not using data1 and application data currently to resolve conflict
 		Picking one of the values using hash values
 		"""
-		hashedData1 = hashlib.md5(data1[0]).hexdigest()
-		hashedAppData = hashlib.md5(self.appData[indexInApp][0]).hexdigest()
+		hashedData1 = hashlib.md5(data1[1]).hexdigest()
+		hashedAppData = hashlib.md5(self.appData[indexInApp][1]).hexdigest()
 		if (hashedData1 > hashedAppData) :
 			return 0
 		else :
@@ -378,7 +378,7 @@ class Node:
 
 					# Application record is updated
 					elif vectorComparison == 1 or vectorComparison == 3:
-						self.appDataChosen(record)
+						return
 
 					else :
 						raise ValueError ("Invalid return from compare vector method!")
@@ -410,19 +410,19 @@ class Node:
 				else :
 					# Does not choose app Data
 					if self.resolveMergeConflict(inflatedIncomingBufferRecord, recordIndex) :
-						self.store[record.recordID] = record 
+						self.store[record.recordID] = deepcopy(record)
 						self.bufferDataChosen(record)
 
 					# Chooses app Data
 					else :
 						self.appData[recordIndex] = self.changeTuple(self.appData[recordIndex],2,0)
-						self.store[record.recordID] = record 
+						self.store[record.recordID] = deepcopy(record) 
 						self.appDataChosen(record)
 						
 			# Record does not exist in the application
 			else :	
 				self.appData.append(self.inflateRecord(record))
-				self.store[str(record.recordID)] = record
+				self.store[str(record.recordID)] = deepcopy(record)
 	
 
 	def fsicDiffAndSnapshot ( self, filter, receivedFSIC ) :
@@ -548,6 +548,9 @@ class Node:
 		"""
 		print "Instance ID :" + str(self.instanceID)
 		print "Counter value :" + str(self.counter)
+		print "appData :"
+		for i in range(0, len(self.appData)) :
+			print self.appData[i] 
 		print "syncDataStructure :"
 		for key, value in self.syncDataStructure.items() :
 			print key + ":"
