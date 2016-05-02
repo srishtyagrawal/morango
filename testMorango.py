@@ -310,6 +310,11 @@ class Test(unittest.TestCase) :
 		# Node C pushing data to Node D
 		sess2_3 = p[2].createSyncSession(p[3], "D")
 		p[2].pushInitiation(sess2_3, (Node.ALL, Node.ALL))
+		self.assertEqual(p[3].store["record1"].lastSavedByHistory, {"B":1, "A":1, "D":2, "C":1})
+
+		# Node C pulling data from Node D
+		p[2].pullInitiation(sess2_3, (Node.ALL, Node.ALL))
+		self.assertEqual(p[2].store["record1"].lastSavedByHistory, {"B":1, "A":1, "D":2, "C":1})
 
 
 	def test_eventualConsistencyRing(self) :

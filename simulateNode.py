@@ -48,6 +48,7 @@ class Node:
 		Increment counter by 1 when data is saved/modified
 		"""
 		self.counter = self.counter + 1
+		self.syncDataStructure[Node.ALL + "+" + Node.ALL][str(self.instanceID)] = self.counter	
 
 
 	def searchRecordInApp (self, recordID):
@@ -353,7 +354,6 @@ class Node:
 
 			# Record exists in the application
 			if recordIndex >= 0 :
-				self.updateCounter()
 
 				# Dirty bit in the application is not set
 				if self.appData[recordIndex][2] == 0 :
@@ -364,6 +364,7 @@ class Node:
 					# Merge conflict between incoming buffer record and store record
 					if vectorComparison == 2 :
 
+						self.updateCounter()
 						if self.resolveMergeConflict(inflatedIncomingBufferRecord, recordIndex):
 							# Merge conflict resolution did not choose the app data
 							self.bufferDataChosen(record)
@@ -385,6 +386,7 @@ class Node:
 
 				# Dirty bit for the record is set
 				else :
+					self.updateCounter()
 					self.appData[recordIndex] = self.changeTuple(self.appData[recordIndex],2,0)
 					# Merge conflict resolution did not choose the app Data
 					if self.resolveMergeConflict(inflatedIncomingBufferRecord, recordIndex) :
@@ -402,12 +404,12 @@ class Node:
 		else :
 			# Record exists in the application
 			if recordIndex >= 0 :
-				self.updateCounter()
 
 				if self.appData[i][2] == 0 :
 					raise ValueError('Data not present in Store but present in Application!')
 
 				else :
+					self.updateCounter()
 					# Does not choose app Data
 					if self.resolveMergeConflict(inflatedIncomingBufferRecord, recordIndex) :
 						self.store[record.recordID] = deepcopy(record)
