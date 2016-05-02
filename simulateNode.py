@@ -248,7 +248,6 @@ class Node:
 
                 	# Update the sync data structure according to integrated data
                 	self.updateSyncDS (value[1][0], value[0][0]+"+"+value[0][1])
-
 			# After all the records from incoming buffer have been integrated to store
 			del self.incomingBuffer[key]
 
@@ -324,20 +323,31 @@ class Node:
 		self.store[recordID].lastSavedByHistory = history
 
 
-	def bufferDataChosen(self, record) :
+	def bufferDataChosen(self, record, hist) :
 		recordIndex = self.searchRecordInApp(record.recordID)
 		storeRecordHistory = self.store[record.recordID].lastSavedByHistory
 
 		self.appData[recordIndex] = self.changeTuple(self.appData[recordIndex],1,record.recordData)
-		history = self.giveMaxDict([record.lastSavedByHistory, storeRecordHistory, {self.instanceID:self.counter}])
-		self.editRecordInStore( record.recordID, record.recordData, self.instanceID, self.counter, history)
+		if len(hist) > 0 :
+			history = self.giveMaxDict([record.lastSavedByHistory, storeRecordHistory, hist])
+			self.editRecordInStore( record.recordID, record.recordData, self.instanceID, self.counter, history)
+		else :
+			history = self.giveMaxDict([record.lastSavedByHistory, storeRecordHistory])
+			self.editRecordInStore( record.recordID, record.recordData, record.lastSavedByInstance, \
+				record.lastSavedByCounter, history)
 
-	def appDataChosen (self, record) :
+	def appDataChosen (self, record, hist) :
 		recordIndex = self.searchRecordInApp(record.recordID)
 		storeRecordHistory = self.store[record.recordID].lastSavedByHistory
 
-		history = self.giveMaxDict([record.lastSavedByHistory, storeRecordHistory, {self.instanceID:self.counter}])
-		self.editRecordInStore( record.recordID, self.appData[recordIndex][1], self.instanceID, self.counter, history)
+		if len(hist) > 0 :
+			history = self.giveMaxDict([record.lastSavedByHistory, storeRecordHistory, hist])
+			self.editRecordInStore( record.recordID, self.appData[recordIndex][1], \
+				self.instanceID, self.counter, history)
+		else :
+			history = self.giveMaxDict([record.lastSavedByHistory, storeRecordHistory])
+			self.editRecordInStore( record.recordID, self.appData[recordIndex][1], record.lastSavedByInstance\
+				, record.lastSavedByCounter, history)
 
 
 	def integrateRecord (self, record) :
@@ -367,15 +377,15 @@ class Node:
 						self.updateCounter()
 						if self.resolveMergeConflict(inflatedIncomingBufferRecord, recordIndex):
 							# Merge conflict resolution did not choose the app data
-							self.bufferDataChosen(record)
+							self.bufferDataChosen(record, {self.instanceID :self.counter})
 
 						else :
 							# Merge conflict resolution algorithm chose app data
-							self.appDataChosen(record)
+							self.appDataChosen(record, {self.instanceID :self.counter})
 
 					#Chooses incoming buffer record 
 					elif vectorComparison == 0  :
-						self.bufferDataChosen(record)
+						self.bufferDataChosen(record, {})
 
 					# Application record is updated
 					elif vectorComparison == 1 or vectorComparison == 3:
@@ -390,11 +400,11 @@ class Node:
 					self.appData[recordIndex] = self.changeTuple(self.appData[recordIndex],2,0)
 					# Merge conflict resolution did not choose the app Data
 					if self.resolveMergeConflict(inflatedIncomingBufferRecord, recordIndex) :
-						self.bufferDataChosen(record)
+						self.bufferDataChosen(record, {self.instanceID:self.counter})
 						 
 					# Merge conflict resolution chose the app Data
 					else :
-						self.appDataChosen(record)
+						self.appDataChosen(record,  {self.instanceID:self.counter})
 
 			# Record does not exist in the application
 			else :
@@ -413,13 +423,13 @@ class Node:
 					# Does not choose app Data
 					if self.resolveMergeConflict(inflatedIncomingBufferRecord, recordIndex) :
 						self.store[record.recordID] = deepcopy(record)
-						self.bufferDataChosen(record)
+						self.bufferDataChosen(record, {self.instanceID:self.counter})
 
 					# Chooses app Data
 					else :
 						self.appData[recordIndex] = self.changeTuple(self.appData[recordIndex],2,0)
 						self.store[record.recordID] = deepcopy(record) 
-						self.appDataChosen(record)
+						self.appDataChosen(record, {self.instanceID:self.counter})
 						
 			# Record does not exist in the application
 			else :	
@@ -475,7 +485,7 @@ class Node:
 			if request and request[0] == "PULL" :
 				filter, snapshot = self.fsicDiffAndSnapshot ( request[2], request[3])
 				self.queue(request[1], filter, snapshot)
-				self.send(client, k, ("DATA", request[1], self.outgoingBuffer[(request[1])]))
+				self.send(client, k, ("DATA", request[1], self.outgoingBuffer[request[1]]))
 				del self.outgoingBuffer[request[1]]
 				self.sessions[k].ongoingRequest = None
 

@@ -3,10 +3,13 @@ from syncSession import SyncSession
 from storeRecord import StoreRecord 
 import unittest
 import sys
+import random
 
 class Test(unittest.TestCase) :
 	RINGSIZE = 6
 	STARSIZE = 8
+	RINGRANDOMSIZE = 25
+
 
 	def test_emptyInstanceID(self) :
 		self.assertRaises(ValueError, lambda: Node(""))
@@ -393,8 +396,49 @@ class Test(unittest.TestCase) :
                 		self.assertEqual (nodeList[i].store.has_key(chr(j+65) + "1"), True)
                 		self.assertEqual (nodeList[i].store.has_key(chr(j+65) + "2"), True)
 
+	def endCondition (self, nodeList) :
+		counter = 0
+		data = nodeList[0].store["id"].lastSavedByHistory
+		for i in range(1, len(nodeList)) :
+			if nodeList[i].store["id"].lastSavedByHistory != data :
+				counter = 1
+		if counter == 1 :
+			return True
+		return False
+
+	def test_eventualRingRandom (self) :
+		nextExchange = []
+		nodeList = []
+		sessionInfo = []
+		ringSize = self.RINGRANDOMSIZE
+		for i in range (ringSize) :
+        		nodeList.append(Node( chr(i+65) ) )
+        		nodeList[i].addAppData("id","record data " + chr(i+65), Node.ALL, Node.ALL )
+        		nodeList[i].serialize((Node.ALL, Node.ALL))
+			if i != 0:
+				sessionInfo.append((i-1,i , (nodeList[i-1].createSyncSession(nodeList[i], chr(i+65)))))
+		sessionInfo.append((ringSize -1, 0, nodeList[ringSize-1].createSyncSession(nodeList[0], "A")))	
+		
+		
+
+		loop = 0 
+		while self.endCondition(nodeList) :
+			nextExchange = [x for x in range(ringSize)]
+			while len(nextExchange) > 0 :
+				index = random.randint(0, len(nextExchange)-1)
+				sess = sessionInfo[nextExchange[index]]
+				# Full DB replication 
+				nodeList[sess[0]].pullInitiation(sess[2], (Node.ALL, Node.ALL))	
+				nodeList[sess[0]].pushInitiation(sess[2], (Node.ALL, Node.ALL))
+				self.assertEqual(nodeList[sess[0]].store["id"].lastSavedByHistory, nodeList[sess[1]].store["id"].lastSavedByHistory)
+				del nextExchange[index]
+			loop = loop + 1			
+		print loop
+		#self.assertLessEqual(loop, (ringSize+1))
+
 if __name__ == '__main__':
 	if len(sys.argv) > 1:
 		Test.STARSIZE = int(sys.argv.pop())
 		Test.RINGSIZE = int(sys.argv.pop())
+		Test.RINGRANDOMSIZE = int(sys.argv.pop())
 	unittest.main()
