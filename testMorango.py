@@ -8,8 +8,7 @@ import random
 class Test(unittest.TestCase) :
 	RINGSIZE = 6
 	STARSIZE = 8
-	RINGRANDOMSIZE = 25
-
+	RINGRANDOMSIZE = 5
 
 	def test_emptyInstanceID(self) :
 		self.assertRaises(ValueError, lambda: Node(""))
@@ -93,10 +92,18 @@ class Test(unittest.TestCase) :
 		self.assertEqual(n.compareVectors({"A":2, "B":3},{"A":3}), 2)
 
 
-	def test_scenario1(self) :
+	def createNodes(self, size):
+		"""
+		Creates size number of nodes and puts it in a list.
+		"""
 		nodeList = []
-		for i in range (3):
-        		nodeList.append(Node( chr(i+65) ) )
+		for i in range(size) :
+			nodeList.append(Node(chr(i+65)))
+		return nodeList
+
+
+	def test_scenario1(self) :
+		nodeList = self.createNodes(3)
 
 		# Adding a record to a node A
 		nodeList[0].addAppData("record1","record1", Node.ALL, Node.ALL)
@@ -213,9 +220,7 @@ class Test(unittest.TestCase) :
 
 
 	def test_fast_forward_scenario1 (self) :
-		m = []
-		for i in range (3):
-        		m.append(Node( chr(i+65) ) )
+		m = self.createNodes(3)
 
 		# Adding a record to a node A
 		m[0].addAppData("record1","A version 1", Node.ALL, Node.ALL)
@@ -273,9 +278,7 @@ class Test(unittest.TestCase) :
 
 
 	def test_mergeConflict_scenario1(self) :
-		p = []
-		for i in range (4):
-        		p.append(Node( chr(i+65) ) )
+		p = self.createNodes(4)
 
 		# Adding a record to a node A
 		p[0].addAppData("record1","A version 1", Node.ALL, Node.ALL)
@@ -321,12 +324,11 @@ class Test(unittest.TestCase) :
 
 
 	def test_eventualConsistencyRing(self) :
-		nodeList = []
 		ringSize = self.RINGSIZE
 		print str(ringSize) + " Nodes arranged in ring topology"
 
+		nodeList = self.createNodes(ringSize)
 		for i in range (ringSize):
-        		nodeList.append(Node( chr(i+65) ) )
         		# Create 2 records per node 
         		nodeList[i].addAppData(chr(i+65) + str(1),chr(i+65) + str(1), Node.ALL, Node.ALL )
         		nodeList[i].addAppData(chr(i+65) + str(2),chr(i+65) + str(2), Node.ALL, Node.ALL )
@@ -362,12 +364,11 @@ class Test(unittest.TestCase) :
                 		self.assertEqual (nodeList[i].store.has_key(chr(j+65) + "2"), True)
 
 	def test_eventualConsistencyStar(self) :
-		nodeList = []
 		starSize = self.STARSIZE
 		print str(starSize) + " Nodes arranged in star topology"
 
+		nodeList = self.createNodes(starSize)
 		for i in range (starSize):
-        		nodeList.append(Node( chr(i+65) ) )
         		# Create 2 records per node 
         		nodeList[i].addAppData(chr(i+65) + str(1),chr(i+65) + str(1), Node.ALL, Node.ALL )
         		nodeList[i].addAppData(chr(i+65) + str(2),chr(i+65) + str(2), Node.ALL, Node.ALL )
@@ -396,23 +397,38 @@ class Test(unittest.TestCase) :
                 		self.assertEqual (nodeList[i].store.has_key(chr(j+65) + "1"), True)
                 		self.assertEqual (nodeList[i].store.has_key(chr(j+65) + "2"), True)
 
-	def endCondition (self, nodeList) :
-		counter = 0
+	def endConditionMerge (self, nodeList) :
 		data = nodeList[0].store["id"].lastSavedByHistory
 		for i in range(1, len(nodeList)) :
 			if nodeList[i].store["id"].lastSavedByHistory != data :
-				counter = 1
-		if counter == 1 :
-			return True
+				return True
 		return False
+
+
+	def endConditionData (self, nodeList) :
+		data  = []
+		for i in range (len(nodeList)) :
+			for k,v in nodeList[i].store.items():
+				data.append(v.recordID)
+
+		for i in range(len(nodeList)) :
+			if len(nodeList[i].store) != len(data) :
+				return True
+			else :
+				for m in data :
+					if not(nodeList[i].has_key(m)) :
+						return True
+					
+		return False
+
 
 	def test_eventualRingRandom (self) :
 		nextExchange = []
-		nodeList = []
 		sessionInfo = []
 		ringSize = self.RINGRANDOMSIZE
+		nodeList = self.createNodes(ringSize)
+
 		for i in range (ringSize) :
-        		nodeList.append(Node( chr(i+65) ) )
         		nodeList[i].addAppData("id","record data " + chr(i+65), Node.ALL, Node.ALL )
         		nodeList[i].serialize((Node.ALL, Node.ALL))
 			if i != 0:
@@ -422,7 +438,7 @@ class Test(unittest.TestCase) :
 		
 
 		loop = 0 
-		while self.endCondition(nodeList) :
+		while self.endConditionMerge(nodeList) :
 			nextExchange = [x for x in range(ringSize)]
 			while len(nextExchange) > 0 :
 				index = random.randint(0, len(nextExchange)-1)
@@ -434,8 +450,43 @@ class Test(unittest.TestCase) :
 				del nextExchange[index]
 			loop = loop + 1			
 		print loop
-		#self.assertLessEqual(loop, (ringSize+1))
+		self.assertLessEqual(loop, ringSize * ringSize)
 
+
+	def eventualFullConnectedRandom (self, networkSize) :
+		nodeList = self.createNodes(networkSize)
+		sessionInfo = []
+
+		for i in range (networkSize) :
+        		nodeList[i].addAppData("id","record data " + chr(i+65), Node.ALL, Node.ALL )
+        		nodeList[i].serialize((Node.ALL, Node.ALL))
+
+		for i in range (networkSize) :
+			for j in range(networkSize):
+				if(i != j) :
+					sessionInfo.append((i,j, (nodeList[i].createSyncSession(nodeList[j], chr(j+65)))))
+
+		total = 0 
+		while self.endConditionMerge(nodeList) :
+			index = random.randint(0, len(sessionInfo)-1)
+			nodeList[sessionInfo[index][0]].pullInitiation(sessionInfo[index][2],\
+				 (Node.ALL, Node.ALL))	
+			total = total + 1			
+		return total
+
+	def test_multipleEventualFull (self) :
+		temp = []
+		f = open("mergeStats", "a+")
+
+		for j in range(3,10) :
+			for i in range(10) :
+				temp.append(self.eventualFullConnectedRandom(j))
+			f.write(str(j))
+			f.write("\n")
+			f.write(str(temp))	
+			f.write("\n")
+			del temp[:]
+		
 if __name__ == '__main__':
 	if len(sys.argv) > 1:
 		Test.STARSIZE = int(sys.argv.pop())
