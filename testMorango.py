@@ -101,6 +101,25 @@ class Test(unittest.TestCase) :
 			nodeList.append(Node(chr(i+65)))
 		return nodeList
 
+	def addAppRecordMerge (self, nodeList) :
+		"""
+		Adds an application record to each node in the nodeList such that
+		they create a merge conflict among each other. i.e their IDs are same but 
+		different data.
+		"""
+		for i in range(len(nodeList)) :
+			nodeList[i].addAppData("id","data " + chr(i+65) , Node.ALL, Node.ALL)
+			nodeList[i].serialize((Node.ALL, Node.ALL))
+
+
+	def addAppRecordDiff (self, nodeList) :
+		"""
+		Adds an application record to each node in the nodelist such that they have different recordIDs
+		"""
+		for i in range(len(nodeList)) :
+			nodeList[i].addAppData("record" + chr(i+65) , "recordData"+ chr(i+65), Node.ALL, Node.ALL)
+			nodeList[i].serialize((Node.ALL, Node.ALL))
+
 
 	def test_scenario1(self) :
 		nodeList = self.createNodes(3)
@@ -323,33 +342,64 @@ class Test(unittest.TestCase) :
 		self.assertEqual(p[2].store["record1"].lastSavedByHistory, {"B":1, "A":1, "D":2, "C":1})
 
 
+	def endConditionData (self, nodeList) :
+		data  = set([])
+		for i in range (len(nodeList)) :
+			for k,v in nodeList[i].store.items():
+				data.add(v.recordID)
+
+		for i in range(len(nodeList)) :
+			if len(nodeList[i].store) != len(data) :
+				return True
+			else :
+				for m in data :
+					if not(nodeList[i].store.has_key(m)) :
+						return True
+					
+		return False
+
+
+	def endConditionMerge (self, nodeList) :
+		data = nodeList[0].store["id"].lastSavedByHistory
+		for i in range(1, len(nodeList)) :
+			if nodeList[i].store["id"].lastSavedByHistory != data :
+				return True
+		return False
+
+
+	def fullDBReplication(self, clientHandler, sessionID ):
+                # Client pulling server's data
+                clientHandler.pullInitiation(sessionID, (Node.ALL, Node.ALL))
+                # Client pushing data to server
+                clientHandler.pushInitiation(sessionID, (Node.ALL, Node.ALL))
+
+
+	def sessionsRing(self, nodeList) :
+		sessIDlist = []
+		#Create sync sessions and store session IDs in a list
+		ringSize = len(nodeList)
+		for i in range(ringSize) :
+        		if i == ringSize - 1 :
+                		sessIDlist.append((i, 0, nodeList[i].createSyncSession(nodeList[0], "A")))
+        		else :
+                		sessIDlist.append((i, i+1, nodeList[i].createSyncSession(nodeList[i+1], chr(i+66))))
+		return sessIDlist
+
+
 	def test_eventualConsistencyRing(self) :
 		ringSize = self.RINGSIZE
 		print str(ringSize) + " Nodes arranged in ring topology"
 
 		nodeList = self.createNodes(ringSize)
-		for i in range (ringSize):
-        		# Create 2 records per node 
-        		nodeList[i].addAppData(chr(i+65) + str(1),chr(i+65) + str(1), Node.ALL, Node.ALL )
-        		nodeList[i].addAppData(chr(i+65) + str(2),chr(i+65) + str(2), Node.ALL, Node.ALL )
-        		nodeList[i].serialize((Node.ALL, Node.ALL))
+		self.addAppRecordDiff(nodeList)
 
 		# i client , i+1 server 
-		sessIDlist = []
-		#Create sync sessions and store session IDs in a list
-		for i in range(ringSize) :
-        		if i == ringSize - 1 :
-                		sessIDlist.append(nodeList[i].createSyncSession(nodeList[0], "A"))
-        		else :
-                		sessIDlist.append(nodeList[i].createSyncSession(nodeList[i+1], chr(i+66)))
+		sessIDlist = self.sessionsRing(nodeList)
 
 		for j in range (2) :
         		for i in range(ringSize) :
                 		sessIDlist.append(nodeList[i].createSyncSession(nodeList[0], "A"))
-                		# Node i pulling i+1's data
-                		nodeList[i].pullInitiation(sessIDlist[i], (Node.ALL, Node.ALL))
-                		# Node i pushing data to i+1
-                		nodeList[i].pushInitiation(sessIDlist[i], (Node.ALL, Node.ALL))
+				self.fullDBReplication(nodeList[sessIDlist[i][0]], sessIDlist[i][2])
 				
 				# Print statements
 				if i == ringSize -1 :
@@ -358,21 +408,15 @@ class Test(unittest.TestCase) :
 					print "Sync data between " + chr(i+65) + " and " + chr(i+66)
 
 		# Asserts to show that all the nodes have the same data
-		for i in range(ringSize) :
-        		for j in range (ringSize):
-                		self.assertEqual (nodeList[i].store.has_key(chr(j+65) + "1"), True)
-                		self.assertEqual (nodeList[i].store.has_key(chr(j+65) + "2"), True)
+		self.assertEqual(self.endConditionData(nodeList) , False)
+
 
 	def test_eventualConsistencyStar(self) :
 		starSize = self.STARSIZE
 		print str(starSize) + " Nodes arranged in star topology"
 
 		nodeList = self.createNodes(starSize)
-		for i in range (starSize):
-        		# Create 2 records per node 
-        		nodeList[i].addAppData(chr(i+65) + str(1),chr(i+65) + str(1), Node.ALL, Node.ALL )
-        		nodeList[i].addAppData(chr(i+65) + str(2),chr(i+65) + str(2), Node.ALL, Node.ALL )
-        		nodeList[i].serialize((Node.ALL, Node.ALL))
+		self.addAppRecordDiff(nodeList)
 
 		# i client , (starSize -1)  server      
 		sessIDlist1 = []
@@ -383,59 +427,21 @@ class Test(unittest.TestCase) :
 
 		for j in range (2) :
         		for i in range(starSize-1) :
-                		# Node i pulling (starSize-1)'s data
-                		nodeList[i].pullInitiation(sessIDlist1[i], (Node.ALL, Node.ALL))
-                		# Node i pushing data to (starSize-1)
-                		nodeList[i].pushInitiation(sessIDlist1[i], (Node.ALL, Node.ALL))
+				self.fullDBReplication(nodeList[i], sessIDlist1[i])
 
 				# Print statements
 				print "Sync data between " + chr(i+65) + " and " + chr(64+starSize)
 
 		# Asserts to show that all the nodes have the same data
-		for i in range(starSize) :
-        		for j in range (starSize):
-                		self.assertEqual (nodeList[i].store.has_key(chr(j+65) + "1"), True)
-                		self.assertEqual (nodeList[i].store.has_key(chr(j+65) + "2"), True)
-
-	def endConditionMerge (self, nodeList) :
-		data = nodeList[0].store["id"].lastSavedByHistory
-		for i in range(1, len(nodeList)) :
-			if nodeList[i].store["id"].lastSavedByHistory != data :
-				return True
-		return False
-
-
-	def endConditionData (self, nodeList) :
-		data  = []
-		for i in range (len(nodeList)) :
-			for k,v in nodeList[i].store.items():
-				data.append(v.recordID)
-
-		for i in range(len(nodeList)) :
-			if len(nodeList[i].store) != len(data) :
-				return True
-			else :
-				for m in data :
-					if not(nodeList[i].has_key(m)) :
-						return True
-					
-		return False
+		self.assertEqual(self.endConditionData(nodeList) , False)
 
 
 	def test_eventualRingRandom (self) :
 		nextExchange = []
-		sessionInfo = []
 		ringSize = self.RINGRANDOMSIZE
 		nodeList = self.createNodes(ringSize)
-
-		for i in range (ringSize) :
-        		nodeList[i].addAppData("id","record data " + chr(i+65), Node.ALL, Node.ALL )
-        		nodeList[i].serialize((Node.ALL, Node.ALL))
-			if i != 0:
-				sessionInfo.append((i-1,i , (nodeList[i-1].createSyncSession(nodeList[i], chr(i+65)))))
-		sessionInfo.append((ringSize -1, 0, nodeList[ringSize-1].createSyncSession(nodeList[0], "A")))	
-		
-		
+		self.addAppRecordMerge(nodeList)
+		sessionInfo = self.sessionsRing(nodeList)
 
 		loop = 0 
 		while self.endConditionMerge(nodeList) :
@@ -444,8 +450,7 @@ class Test(unittest.TestCase) :
 				index = random.randint(0, len(nextExchange)-1)
 				sess = sessionInfo[nextExchange[index]]
 				# Full DB replication 
-				nodeList[sess[0]].pullInitiation(sess[2], (Node.ALL, Node.ALL))	
-				nodeList[sess[0]].pushInitiation(sess[2], (Node.ALL, Node.ALL))
+				self.fullDBReplication(nodeList[sess[0]], sess[2])
 				self.assertEqual(nodeList[sess[0]].store["id"].lastSavedByHistory, nodeList[sess[1]].store["id"].lastSavedByHistory)
 				del nextExchange[index]
 			loop = loop + 1			
@@ -455,11 +460,8 @@ class Test(unittest.TestCase) :
 
 	def eventualFullConnectedRandom (self, networkSize) :
 		nodeList = self.createNodes(networkSize)
+		self.addAppRecordMerge(nodeList)
 		sessionInfo = []
-
-		for i in range (networkSize) :
-        		nodeList[i].addAppData("id","record data " + chr(i+65), Node.ALL, Node.ALL )
-        		nodeList[i].serialize((Node.ALL, Node.ALL))
 
 		for i in range (networkSize) :
 			for j in range(networkSize):
@@ -473,6 +475,7 @@ class Test(unittest.TestCase) :
 				 (Node.ALL, Node.ALL))	
 			total = total + 1			
 		return total
+
 
 	def test_multipleEventualFull (self) :
 		temp = []
