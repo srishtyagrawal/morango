@@ -419,6 +419,15 @@ class Test(unittest.TestCase) :
 		return sessIDlist
 
 
+	def sessionsStar(self, nodeList) :
+		# i client , len(nodeList)-1 server      
+		sessIDlist = []
+		starSize = len(nodeList)
+		#Create sync sessions and store session IDs in a list
+		for i in range(starSize -1) :
+        		sessIDlist.append(nodeList[i].createSyncSession(nodeList[starSize-1], nodeList[starSize-1].instanceID))
+		return sessIDlist
+
 	def sessionsFull(self, nodeList) :
 		"""
 		Establishes sync session between any 2 nodes in the network,
@@ -471,17 +480,11 @@ class Test(unittest.TestCase) :
 
 		nodeList = self.createNodes(starSize)
 		self.addAppRecordDiff(nodeList)
-
-		# i client , (starSize -1)  server      
-		sessIDlist1 = []
-		#Create sync sessions and store session IDs in a list
-		for i in range(starSize -1) :
-        		sessIDlist1.append(nodeList[i].createSyncSession(nodeList[starSize-1], nodeList[starSize-1].instanceID))
-
+		sessIDlist = self.sessionsStar(nodeList)
 
 		for j in range (2) :
         		for i in range(starSize-1) :
-				self.fullDBReplication(nodeList[i], sessIDlist1[i])
+				self.fullDBReplication(nodeList[i], sessIDlist[i])
 
 				# Print statements
 				print "Sync data between " + nodeList[i].instanceID + " and " + nodeList[starSize-1].instanceID
@@ -558,7 +561,7 @@ class Test(unittest.TestCase) :
 		temp = []
 		f = open("diffStats", "a+")
 
-		for j in range(10) :
+		for j in range(6) :
 			for i in range(10) :
 				temp.append(self.eventualFullDiff(j))
 			print j
@@ -567,6 +570,18 @@ class Test(unittest.TestCase) :
 			f.write(str(temp))	
 			f.write("\n")
 			del temp[:]
+
+	def eventualStarDiff (self, starSize) :
+		nodeList = self.createNodes(starSize)
+		self.addAppRecordDiff(nodeList)
+		sessionInfo = self.sessionsStar(nodeList)
+
+		total = 0 
+		while self.endConditionData(nodeList) :
+			index = random.randint(0, len(sessionInfo)-1)
+			self.fullDBReplication(nodeList[sessionInfo[index][0]], sessionInfo[index][2])
+			total = total + 1			
+		return total
 
 if __name__ == '__main__':
 	if len(sys.argv) > 1:
