@@ -425,8 +425,10 @@ class Test(unittest.TestCase) :
 		starSize = len(nodeList)
 		#Create sync sessions and store session IDs in a list
 		for i in range(starSize -1) :
-        		sessIDlist.append(nodeList[i].createSyncSession(nodeList[starSize-1], nodeList[starSize-1].instanceID))
+        		sessIDlist.append((i, starSize-1, nodeList[i].createSyncSession(nodeList[starSize-1], \
+				nodeList[starSize-1].instanceID)))
 		return sessIDlist
+
 
 	def sessionsFull(self, nodeList) :
 		"""
@@ -484,7 +486,7 @@ class Test(unittest.TestCase) :
 
 		for j in range (2) :
         		for i in range(starSize-1) :
-				self.fullDBReplication(nodeList[i], sessIDlist[i])
+				self.fullDBReplication(nodeList[sessIDlist[i][0]], sessIDlist[i][2])
 
 				# Print statements
 				print "Sync data between " + nodeList[i].instanceID + " and " + nodeList[starSize-1].instanceID
@@ -557,13 +559,42 @@ class Test(unittest.TestCase) :
 		return total
 
 
-	def test_multipleEventualFullDiff (self) :
-		temp = []
-		f = open("diffStats", "a+")
+	def eventualFullDiffBi (self, networkSize, percentage) :
+		nodeList = self.createNodes(networkSize)
+		self.addAppRecordDiff(nodeList)
+		sessionInfo = self.sessionsFull(nodeList)
+		numOffline = int((networkSize * percentage)/100)
+		offline = set([])
 
-		for j in range(6) :
-			for i in range(10) :
-				temp.append(self.eventualFullDiff(j))
+		nodes = [x for x in range(len(nodeList))]
+		for i in range(numOffline):
+			offlineNode = random.randint(0, len(nodes)-1)
+			offline.add(offlineNode)
+			del nodes[offlineNode]
+		print offline
+		total = 0 
+		while self.endConditionData(nodeList) :
+			index = random.randint(0, len(sessionInfo)-1)
+			client = nodeList[sessionInfo[index][0]]
+			server = nodeList[sessionInfo[index][1]]
+			print client 
+			print server
+			if not((client in offline) or (server in offline)) :
+				# Full DB replication
+				self.fullDBReplication(client, sessionInfo[index][2])
+				total = total + 1			
+			else :
+				print "not selected"
+		return total
+
+
+	def test_eventualFullDiff (self) :
+		temp = []
+		f = open("rand", "a+")
+
+		for j in range(10,11) :
+			for i in range(1) :
+				temp.append(self.eventualFullDiffBi(j, 10))
 			print j
 			f.write(str(j))
 			f.write("\n")
@@ -579,9 +610,45 @@ class Test(unittest.TestCase) :
 		total = 0 
 		while self.endConditionData(nodeList) :
 			index = random.randint(0, len(sessionInfo)-1)
+			pushPull = random.randint(0,1)
+			# Randomly choose between push and pull
+			if pushPull :
+				nodeList[sessionInfo[index][0]].pullInitiation(sessionInfo[index][2],(Node.ALL, Node.ALL))	
+			else :
+				nodeList[sessionInfo[index][0]].pushInitiation(sessionInfo[index][2],(Node.ALL, Node.ALL))	
+			total = total + 1			
+		return total
+
+
+	def eventualStarDiffBi (self, starSize) :
+		nodeList = self.createNodes(starSize)
+		self.addAppRecordDiff(nodeList)
+		sessionInfo = self.sessionsStar(nodeList)
+
+		total = 0 
+		while self.endConditionData(nodeList) :
+			index = random.randint(0, len(sessionInfo)-1)
+			# Full DB replication 
 			self.fullDBReplication(nodeList[sessionInfo[index][0]], sessionInfo[index][2])
 			total = total + 1			
 		return total
+
+
+	# Removed test from the front as we dont want this to execute
+	def multipleEventualStarDiff (self) :
+		temp = []
+		f = open("rand2", "a+")
+
+		for j in range(4) :
+			for i in range(1) :
+				temp.append(self.eventualStarDiffBi(j))
+			print j
+			f.write(str(j))
+			f.write("\n")
+			f.write(str(temp))	
+			f.write("\n")
+			del temp[:]
+
 
 if __name__ == '__main__':
 	if len(sys.argv) > 1:
