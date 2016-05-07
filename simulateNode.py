@@ -252,46 +252,26 @@ class Node:
 			del self.incomingBuffer[key]
 
 
-	def compareVectors (self, v1, v2) :
+	def compareVersions (self, v1, v2, savedBy1, savedBy2) :
 		"""
 		Return 0 if v1 is smaller than v2
 		       1 if v2 is smaller than v1 
 		       2 if there is a merge conflict i.e there is no ordering between v1 and v2
 		       3 if v1 is same as v2
 		"""
-		# Checking if two vectors are equal
-		temp = set()
-		if len(v1) == len(v2) :
-			for key,value in v1.items() :
-				if v2.has_key(key) and v2[key] == v1[key] :
-					temp.add(3)
-				else :
-					temp.add(9)
-		if len(temp) == 1 and (3 in temp) :
-			return temp
-		temp = set()
+		if savedBy1 == savedBy2 :
+			return 3
 
-		# Checking is v1 is smaller than v2
-		for key, value in v1.items() :
-			if v2.has_key(key) and v2[key] >= v1[key] :
-				temp.add(0)
-			else :
-				temp.add(2)
-		if len(temp) == 1 and (0 in temp) :
-			return 0
+		v2GreaterThanv1 = v2.has_key(savedBy1[0]) and v2[savedBy1[0]] >= savedBy1[1]
+		v1GreaterThanv2 = v1.has_key(savedBy2[0]) and v1[savedBy2[0]] >= savedBy2[1]
 
-		# Checking if v2 is smaller than v1
-		temp = set()
-		for key,value in v2.items() :
-			if v1.has_key(key) and v1[key] >= v2[key] :
-				temp.add(1)
-			else :
-				temp.add(3)
-		if len(temp) == 1 and (1 in temp) :
-			return 1 	
+		if v2GreaterThanv1 and not(v1GreaterThanv2) :
+			return 0 
+		elif not(v2GreaterThanv1) and v1GreaterThanv2 :
+			return 1 
 		else :
 			return 2
-
+		
 
 	def resolveMergeConflict(self, data1, indexInApp) :
 		"""
@@ -369,10 +349,13 @@ class Node:
 				if self.appData[recordIndex][2] == 0 :
 
 					storeRecordHistory = self.store[record.recordID].lastSavedByHistory
-					vectorComparison = self.compareVectors(storeRecordHistory, record.lastSavedByHistory)
+					storeRecord = self.store[record.recordID]
+					versionComparison = self.compareVersions(storeRecordHistory, record.lastSavedByHistory,\
+						(storeRecord.lastSavedByInstance, storeRecord.lastSavedByCounter), \
+						(record.lastSavedByInstance, record.lastSavedByCounter))
 
 					# Merge conflict between incoming buffer record and store record
-					if vectorComparison == 2 :
+					if versionComparison == 2 :
 
 						self.updateCounter()
 						if self.resolveMergeConflict(inflatedIncomingBufferRecord, recordIndex):
@@ -384,15 +367,15 @@ class Node:
 							self.appDataChosen(record, {self.instanceID :self.counter})
 
 					#Chooses incoming buffer record 
-					elif vectorComparison == 0  :
+					elif versionComparison == 0  :
 						self.bufferDataChosen(record, {})
 
 					# Application record is updated
-					elif vectorComparison == 1 or vectorComparison == 3:
+					elif versionComparison == 1 or versionComparison == 3:
 						return
 
 					else :
-						raise ValueError ("Invalid return from compare vector method!")
+						raise ValueError ("Invalid return from compare versions method!")
 
 				# Dirty bit for the record is set
 				else :

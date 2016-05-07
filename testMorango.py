@@ -83,13 +83,13 @@ class Test(unittest.TestCase) :
 		self.assertEqual(node.store["record7"].lastSavedByHistory, {"A":7})
 
 
-	def test_compareVectors(self) :
+	def test_compareVersions(self) :
         	n = Node("A")
-		self.assertEqual(n.compareVectors({"A":1},{"A":2}), 0)
-		self.assertEqual(n.compareVectors({"A":1},{"A":1, "B":2}), 0)
-		self.assertEqual(n.compareVectors({"A":4, "B":3},{"A":2}), 1)
-		self.assertEqual(n.compareVectors({"A":2, "B":3},{"A":2}), 1)
-		self.assertEqual(n.compareVectors({"A":2, "B":3},{"A":3}), 2)
+		self.assertEqual(n.compareVersions({"A":1},{"A":2}, ("A",1), ("A",2)), 0)
+		self.assertEqual(n.compareVersions({"A":1},{"A":1, "B":2}, ("A",1), ("B",2)), 0)
+		self.assertEqual(n.compareVersions({"A":4, "B":3},{"A":2}, ("A",4), ("A",2)), 1)
+		self.assertEqual(n.compareVersions({"A":2, "B":3},{"A":2}, ("B",3), ("A",2)), 1)
+		self.assertEqual(n.compareVersions({"A":2, "B":3},{"A":3}, ("B",3), ("A",3)), 2)
 
 
 	def createNodes(self, size):
@@ -559,48 +559,66 @@ class Test(unittest.TestCase) :
 		return total
 
 
-	def eventualFullDiffBi (self, networkSize, percentage) :
-		nodeList = self.createNodes(networkSize)
-		self.addAppRecordDiff(nodeList)
-		sessionInfo = self.sessionsFull(nodeList)
-		numOffline = int((networkSize * percentage)/100)
+	def createOffline (self, nodeList, percentage) :
+		numOffline = int((len(nodeList) * percentage)/100)
 		offline = set([])
-
 		nodes = [x for x in range(len(nodeList))]
 		for i in range(numOffline):
 			offlineNode = random.randint(0, len(nodes)-1)
-			offline.add(offlineNode)
+			offline.add(nodes[offlineNode])
 			del nodes[offlineNode]
-		print offline
-		total = 0 
+		return offline
+
+
+	def createRandomRange(self, start, end) :
+		time =  random.randint(1, end-start)
+		return (start, start+time) 
+
+
+	def isOffline (self, client, server, offline, total, start, end):
+		if (((client in offline) or (server in offline)) and total > start and total < end) :
+			return True
+		else :
+			return False
+
+
+	def eventualFullDiffBi (self, networkSize, percentage, start, end) :
+		nodeList = self.createNodes(networkSize)
+		self.addAppRecordDiff(nodeList)
+		sessionInfo = self.sessionsFull(nodeList)
+
+		offline = self.createOffline(nodeList, percentage)
+		total = 0
+		#print offline  
+		#print "start " + str(start) + " end " + str(end)
 		while self.endConditionData(nodeList) :
 			index = random.randint(0, len(sessionInfo)-1)
-			client = nodeList[sessionInfo[index][0]]
-			server = nodeList[sessionInfo[index][1]]
-			print client 
-			print server
-			if not((client in offline) or (server in offline)) :
+			client = sessionInfo[index][0]
+			server = sessionInfo[index][1]
+
+			if not(self.isOffline(client, server, offline, total, start, end)):
 				# Full DB replication
-				self.fullDBReplication(client, sessionInfo[index][2])
-				total = total + 1			
-			else :
-				print "not selected"
+				self.fullDBReplication(nodeList[client], sessionInfo[index][2])
+				total = total + 1
 		return total
 
 
 	def test_eventualFullDiff (self) :
-		temp = []
 		f = open("rand", "a+")
 
-		for j in range(10,11) :
-			for i in range(1) :
-				temp.append(self.eventualFullDiffBi(j, 10))
+		temp = []
+		for j in range(5) :
 			print j
 			f.write(str(j))
 			f.write("\n")
-			f.write(str(temp))	
-			f.write("\n")
-			del temp[:]
+			(start, end) = self.createRandomRange(1, 5)
+			for k in range(5) :
+				for i in range(10) :
+					temp.append(self.eventualFullDiffBi(j, k*10, start, end))
+				f.write(str(temp))	
+				f.write("\n")
+				del temp[:]
+
 
 	def eventualStarDiff (self, starSize) :
 		nodeList = self.createNodes(starSize)
@@ -634,8 +652,7 @@ class Test(unittest.TestCase) :
 		return total
 
 
-	# Removed test from the front as we dont want this to execute
-	def multipleEventualStarDiff (self) :
+	def test_multipleEventualStarDiff (self) :
 		temp = []
 		f = open("rand2", "a+")
 
