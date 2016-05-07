@@ -11,14 +11,23 @@ class Test(unittest.TestCase) :
 	RINGRANDOMSIZE = 5
 
 	def test_emptyInstanceID(self) :
+		"""
+		Creating instances with empty instance ID should throw error
+		"""
 		self.assertRaises(ValueError, lambda: Node(""))
 
 
 	def test_emptyRecordID(self) :
+		"""
+		Creating record with empty record ID should throw error
+		"""
 		self.assertRaises(ValueError, lambda: StoreRecord("","data","A",1,{},"Facility1", "UserX"))
 
 
 	def test_serialize(self) :
+		"""
+		Testing various scenarios involving serialization
+		"""
         	node = Node("A")
         	# Create some application data for the node
         	node.addAppData("record1","Record1 data", Node.ALL, Node.ALL )
@@ -94,7 +103,7 @@ class Test(unittest.TestCase) :
 
 	def createNodes(self, size):
 		"""
-		Creates size number of nodes and puts it in a list.
+		Creates size number of nodes and returns it as a list.
 		"""
 		nodeList = []
 		for i in range(size) :
@@ -105,7 +114,7 @@ class Test(unittest.TestCase) :
 	def addAppRecordMerge (self, nodeList) :
 		"""
 		Adds an application record to each node in the nodeList such that
-		they create a merge conflict among each other. i.e their IDs are same but 
+		they create a merge conflict with each other. i.e they have same IDs but 
 		different data.
 		"""
 		for i in range(len(nodeList)) :
@@ -364,9 +373,11 @@ class Test(unittest.TestCase) :
 
 	def endConditionData (self, nodeList) :
 		"""
-		End Condition : if all the nodes posses same set of data 
+		Input : List of nodes 
+		Output : Returns boolean value 
 		Return True if the end condition is not met
 		Returns False if end condition is met
+		End Condition : if all the nodes posses same set of data 
 		"""
 		data  = set([])
 		for i in range (len(nodeList)) :
@@ -386,9 +397,11 @@ class Test(unittest.TestCase) :
 
 	def endConditionMerge (self, nodeList) :
 		"""
-		End Condition : if all the nodes posses same data with same lastSavedByHistory 
+		Input : List of nodes 
+		Output : Returns boolean value 
 		Return True if the end condition is not met
 		Returns False if end condition is met
+		End Condition : if all the nodes posses same data with same lastSavedByHistory 
 		"""
 		data = nodeList[0].store["id"].lastSavedByHistory
 		for i in range(1, len(nodeList)) :
@@ -398,6 +411,9 @@ class Test(unittest.TestCase) :
 
 
 	def fullDBReplication(self, clientHandler, sessionID ):
+		"""
+		Initiates both push as well as pull requests for the given session
+		"""
                 # Client pulling server's data
                 clientHandler.pullInitiation(sessionID, (Node.ALL, Node.ALL))
                 # Client pushing data to server
@@ -406,7 +422,7 @@ class Test(unittest.TestCase) :
 
 	def sessionsRing(self, nodeList) :
 		"""
-		Establishes sync sessions between any 2 adjacent nodes and stores in an array
+		Establishes sync sessions between any 2 adjacent nodes and returns it in an array
 		"""
 		sessIDlist = []
 		#Create sync sessions and store session IDs in a list
@@ -420,6 +436,10 @@ class Test(unittest.TestCase) :
 
 
 	def sessionsStar(self, nodeList) :
+		"""
+		Establishes sync sessions between outer nodes and the central node,
+		 and returns it in an array
+		"""
 		# i client , len(nodeList)-1 server      
 		sessIDlist = []
 		starSize = len(nodeList)
@@ -495,29 +515,14 @@ class Test(unittest.TestCase) :
 		self.assertEqual(self.endConditionData(nodeList) , False)
 
 
-	def test_eventualRingRandom (self) :
-		ringSize = self.RINGRANDOMSIZE
-		nodeList = self.createNodes(ringSize)
-		self.addAppRecordMerge(nodeList)
-		sessionInfo = self.sessionsRing(nodeList)
-
-		loop = 0 
-		while self.endConditionMerge(nodeList) :
-			nextExchange = [x for x in range(ringSize)]
-			while len(nextExchange) > 0 :
-				index = random.randint(0, len(nextExchange)-1)
-				sess = sessionInfo[nextExchange[index]]
-				# Full DB replication 
-				self.fullDBReplication(nodeList[sess[0]], sess[2])
-				self.assertEqual(nodeList[sess[0]].store["id"].lastSavedByHistory, \
-					nodeList[sess[1]].store["id"].lastSavedByHistory)
-				del nextExchange[index]
-			loop = loop + 1			
-		print loop
-		self.assertLessEqual(loop, ringSize * ringSize)
-
-
 	def eventualFullMerge (self, networkSize) :
+		"""
+		-Nodes are fully connected
+		-All the nodes have record with same ID but different data, hence end 
+		condition is all nodes having the same copy of record data
+		-Returns the total times communication happened between a pair of nodes
+		before the end condition was reached.
+		"""
 		nodeList = self.createNodes(networkSize)
 		self.addAppRecordMerge(nodeList)
 		sessionInfo = self.sessionsFull(nodeList)
@@ -531,35 +536,31 @@ class Test(unittest.TestCase) :
 		return total
 
 
-	def test_multipleEventualFullMerge (self) :
+	def writeToFile (self, filename, start, end, numIterations, funcName) :
 		temp = []
-		f = open("mergeStats", "a+")
+		listFuncNames = {"eventualFullMerge":self.eventualFullMerge, \
+			"eventualStarDiffBi":self.eventualStarDiffBi}
+		f = open(filename, "a+")
+		func = listFuncNames[funcName]
 
-		for j in range(3,10) :
-			for i in range(10) :
-				temp.append(self.eventualFullMerge(j))
+		for j in range(start,end) :
+			for i in range(numIterations) :
+				temp.append(func(j))
 			f.write(str(j))
 			f.write("\n")
 			f.write(str(temp))	
 			f.write("\n")
 			del temp[:]
-	
-	
-	def eventualFullDiff (self, networkSize) :
-		nodeList = self.createNodes(networkSize)
-		self.addAppRecordDiff(nodeList)
-		sessionInfo = self.sessionsFull(nodeList)
 
-		total = 0 
-		while self.endConditionData(nodeList) :
-			index = random.randint(0, len(sessionInfo)-1)
-			nodeList[sessionInfo[index][0]].pullInitiation(sessionInfo[index][2],\
-				 (Node.ALL, Node.ALL))	
-			total = total + 1			
-		return total
 
+	def test_multipleEventualFullMerge (self) :
+		self.writeToFile("mergeStats", 3, 10, 10, "eventualFullMerge")
+	
 
 	def createOffline (self, nodeList, percentage) :
+		"""
+		Helper function that returns a set of offline nodes
+		"""
 		numOffline = int((len(nodeList) * percentage)/100)
 		offline = set([])
 		nodes = [x for x in range(len(nodeList))]
@@ -571,11 +572,17 @@ class Test(unittest.TestCase) :
 
 
 	def createRandomRange(self, start, end) :
+		"""
+		Helper function which returns a random time range between supplied start and end
+		"""
 		time =  random.randint(1, end-start)
 		return (start, start+time) 
 
 
 	def isOffline (self, client, server, offline, total, start, end):
+		"""
+		Returns True if communication between given client and server can not happen, false otherwise
+		"""
 		if (((client in offline) or (server in offline)) and total > start and total < end) :
 			return True
 		else :
@@ -583,6 +590,14 @@ class Test(unittest.TestCase) :
 
 
 	def eventualFullDiffBi (self, networkSize, percentage, start, end) :
+		"""
+		-Given percentage of nodes go offline between start and end time.
+		-Nodes are fully connected
+		-All the nodes have record with different IDs  
+		-End condition is all nodes having the same set of data(data from all devices)
+		-Returns the total times communication happened between a pair of nodes
+		before the end condition was reached.
+		"""
 		nodeList = self.createNodes(networkSize)
 		self.addAppRecordDiff(nodeList)
 		sessionInfo = self.sessionsFull(nodeList)
@@ -605,7 +620,6 @@ class Test(unittest.TestCase) :
 
 	def test_eventualFullDiff (self) :
 		f = open("rand", "a+")
-
 		temp = []
 		for j in range(5) :
 			print j
@@ -620,25 +634,14 @@ class Test(unittest.TestCase) :
 				del temp[:]
 
 
-	def eventualStarDiff (self, starSize) :
-		nodeList = self.createNodes(starSize)
-		self.addAppRecordDiff(nodeList)
-		sessionInfo = self.sessionsStar(nodeList)
-
-		total = 0 
-		while self.endConditionData(nodeList) :
-			index = random.randint(0, len(sessionInfo)-1)
-			pushPull = random.randint(0,1)
-			# Randomly choose between push and pull
-			if pushPull :
-				nodeList[sessionInfo[index][0]].pullInitiation(sessionInfo[index][2],(Node.ALL, Node.ALL))	
-			else :
-				nodeList[sessionInfo[index][0]].pushInitiation(sessionInfo[index][2],(Node.ALL, Node.ALL))	
-			total = total + 1			
-		return total
-
-
 	def eventualStarDiffBi (self, starSize) :
+		"""
+		-Nodes are arranged in a star topology
+		-All the nodes have record with different IDs  
+		-End condition is all nodes having the same set of data(data from all devices)
+		-Returns the total times communication happened between a pair of nodes
+		before the end condition was reached.
+		"""
 		nodeList = self.createNodes(starSize)
 		self.addAppRecordDiff(nodeList)
 		sessionInfo = self.sessionsStar(nodeList)
@@ -653,18 +656,7 @@ class Test(unittest.TestCase) :
 
 
 	def test_multipleEventualStarDiff (self) :
-		temp = []
-		f = open("rand2", "a+")
-
-		for j in range(4) :
-			for i in range(1) :
-				temp.append(self.eventualStarDiffBi(j))
-			print j
-			f.write(str(j))
-			f.write("\n")
-			f.write(str(temp))	
-			f.write("\n")
-			del temp[:]
+		self.writeToFile("rand2", 0, 4, 1, "eventualStarDiffBi")
 
 
 if __name__ == '__main__':
