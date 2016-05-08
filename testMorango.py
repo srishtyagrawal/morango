@@ -554,7 +554,7 @@ class Test(unittest.TestCase) :
 
 
 	def test_multipleEventualFullMerge (self) :
-		self.writeToFile("mergeStats", 3, 10, 10, "eventualFullMerge")
+		self.writeToFile("mergeStats", 1, 50, 100, "eventualFullMerge")
 	
 
 	def createOffline (self, nodeList, percentage) :
