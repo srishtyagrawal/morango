@@ -1,5 +1,6 @@
 from storeRecord import StoreRecord
 from syncSession import SyncSession
+from appRecord import AppRecord
 from copy import deepcopy
 import random
 import hashlib
@@ -56,28 +57,24 @@ class Node:
 		Returns index of the record in appData if it exists, 
 		-1 otherwise
 		"""
-		for i in range(len(self.appData)) :
-			if self.appData[i][0] == recordID :
+		for i in self.appData :
+			if i.recordID == recordID :
 				return i
-		return -1 
-
-	def changeTuple (self, tupleOld, index, value) :
-		tupleNew = list(tupleOld)
-		tupleNew[index] = value
-		return tuple(tupleNew)
+		return None
 
 
 	def addAppData ( self, recordID, recordData, partitionFacility, partitionUser) :
 		"""
 		Adding records to the application
 		"""
-		recordIndex = self.searchRecordInApp(recordID)
-		if recordIndex >= 0 :
-			self.appData[recordIndex] = self.changeTuple(self.appData[recordIndex], 1, recordData)
-			self.appData[recordIndex] = self.changeTuple(self.appData[recordIndex], 2,  1)
+		appRecord = self.searchRecordInApp(recordID)
+		if appRecord != None :
+			appRecord.updateRecordData(recordData)
+			appRecord.setDirtyBit()
 		else :		
-			# Third argument is the dirty bit which will always be set for new data
-			self.appData.append((recordID, recordData, 1, partitionFacility, partitionUser))
+			# Dirty Bit will always be set for new data
+			appRecord = AppRecord(recordID, recordData, partitionFacility, partitionUser)
+			self.appData.append(appRecord)
 
 
 	def superSetFilters ( self, filter ) :
@@ -222,21 +219,22 @@ class Node:
 		"""
 		for i in range(0, len(self.appData)) :
 			tempAppData = self.appData[i]
-			if tempAppData[2] and self.isSubset((tempAppData[3], tempAppData[4]),filter) :
+			if tempAppData.dirtyBit and self.isSubset((tempAppData.partitionFacility, tempAppData.partitionUser),filter) :
 				self.updateCounter()	
 				# If store has a record with the same ID
-				if self.store.has_key(tempAppData[0]) :
-					temp = self.store[str(tempAppData[0])].lastSavedByHistory
+				if self.store.has_key(tempAppData.recordID) :
+					temp = self.store[str(tempAppData.recordID)].lastSavedByHistory
 					temp[str(self.instanceID)] = self.counter			
-					record = StoreRecord(tempAppData[0], tempAppData[1], self.instanceID, \
-						self.counter, temp, tempAppData[3], tempAppData[4])
+					record = StoreRecord(tempAppData.recordID, tempAppData.recordData, self.instanceID, \
+						self.counter, temp, tempAppData.partitionFacility, tempAppData.partitionUser)
 				# Adding a new record with the given recordID
 				else :
-					record = StoreRecord(tempAppData[0], tempAppData[1], self.instanceID, \
-						self.counter, {str(self.instanceID) : self.counter}, tempAppData[3], tempAppData[4])
-				self.store[str(tempAppData[0])] = record
+					record = StoreRecord(tempAppData.recordID, tempAppData.recordData, self.instanceID, \
+						self.counter, {str(self.instanceID) : self.counter}, \
+						tempAppData.partitionFacility, tempAppData.partitionUser)
+				self.store[str(tempAppData.recordID)] = record
 				# Clear dirty bit from data residing in the application
-				self.appData[i] = self.appData[i][:2] + (0,) + tuple(self.appData[i][-2])
+				self.appData[i].clearDirtyBit()
 				# Making changes to Sync Data Structure 
 				self.syncDataStructure[Node.ALL + "+" + Node.ALL][str(self.instanceID)] = self.counter
 	
@@ -273,14 +271,14 @@ class Node:
 			return 2
 		
 
-	def resolveMergeConflict(self, data1, indexInApp) :
+	def resolveMergeConflict(self, inflatedRecord, appRecord) :
 		"""
-		Not using data1 and application data currently to resolve conflict
+		Not using inflatedRecord and application data currently to resolve conflict
 		Picking one of the values using hash values
 		"""
-		hashedData1 = hashlib.md5(data1[1]).hexdigest()
-		hashedAppData = hashlib.md5(self.appData[indexInApp][1]).hexdigest()
-		if (hashedData1 > hashedAppData) :
+		hashedInflatedData = hashlib.md5(inflatedRecord.recordData).hexdigest()
+		hashedAppData = hashlib.md5(appRecord.recordData).hexdigest()
+		if (hashedInflatedData > hashedAppData) :
 			return 0
 		else :
 			return 1
@@ -292,8 +290,10 @@ class Node:
 		Not adding the record to appData yet
 		"""
 		# Dirty bit is turned off by default
-		return (record.recordID, record.recordData, 0, record.partitionFacility, \
+		record = AppRecord(record.recordID, record.recordData, record.partitionFacility, \
 			record.partitionUser)
+		record.clearDirtyBit()
+		return record
 
 
 	def editRecordInStore (self, recordID, recordData, instanceID, counter, history) :
@@ -304,10 +304,10 @@ class Node:
 
 
 	def bufferDataChosen(self, record, hist) :
-		recordIndex = self.searchRecordInApp(record.recordID)
+		appRecord = self.searchRecordInApp(record.recordID)
 		storeRecordHistory = self.store[record.recordID].lastSavedByHistory
 
-		self.appData[recordIndex] = self.changeTuple(self.appData[recordIndex],1,record.recordData)
+		appRecord.updateRecordData(record.recordData)
 		if len(hist) > 0 :
 			history = self.giveMaxDict([record.lastSavedByHistory, storeRecordHistory, hist])
 			self.editRecordInStore( record.recordID, record.recordData, self.instanceID, self.counter, history)
@@ -316,17 +316,18 @@ class Node:
 			self.editRecordInStore( record.recordID, record.recordData, record.lastSavedByInstance, \
 				record.lastSavedByCounter, history)
 
+
 	def appDataChosen (self, record, hist) :
-		recordIndex = self.searchRecordInApp(record.recordID)
+		appRecord = self.searchRecordInApp(record.recordID)
 		storeRecordHistory = self.store[record.recordID].lastSavedByHistory
 
 		if len(hist) > 0 :
 			history = self.giveMaxDict([record.lastSavedByHistory, storeRecordHistory, hist])
-			self.editRecordInStore( record.recordID, self.appData[recordIndex][1], \
+			self.editRecordInStore( record.recordID, appRecord.recordData, \
 				self.instanceID, self.counter, history)
 		else :
 			history = self.giveMaxDict([record.lastSavedByHistory, storeRecordHistory])
-			self.editRecordInStore( record.recordID, self.appData[recordIndex][1], record.lastSavedByInstance\
+			self.editRecordInStore( record.recordID, appRecord.recordData, record.lastSavedByInstance\
 				, record.lastSavedByCounter, history)
 
 
@@ -337,16 +338,16 @@ class Node:
 
 		inflatedIncomingBufferRecord = self.inflateRecord(record)
 		# Checking if record exists in the application
-		recordIndex = self.searchRecordInApp(record.recordID)
+		appRecord = self.searchRecordInApp(record.recordID)
 
 		# If record exists in store
 		if self.store.has_key(record.recordID) :
 
 			# Record exists in the application
-			if recordIndex >= 0 :
+			if appRecord != None :
 
 				# Dirty bit in the application is not set
-				if self.appData[recordIndex][2] == 0 :
+				if not(appRecord.dirtyBit):
 
 					storeRecordHistory = self.store[record.recordID].lastSavedByHistory
 					storeRecord = self.store[record.recordID]
@@ -358,7 +359,7 @@ class Node:
 					if versionComparison == 2 :
 
 						self.updateCounter()
-						if self.resolveMergeConflict(inflatedIncomingBufferRecord, recordIndex):
+						if self.resolveMergeConflict(inflatedIncomingBufferRecord, appRecord):
 							# Merge conflict resolution did not choose the app data
 							self.bufferDataChosen(record, {self.instanceID :self.counter})
 
@@ -380,9 +381,9 @@ class Node:
 				# Dirty bit for the record is set
 				else :
 					self.updateCounter()
-					self.appData[recordIndex] = self.changeTuple(self.appData[recordIndex],2,0)
+					appRecord.clearDirtyBit()
 					# Merge conflict resolution did not choose the app Data
-					if self.resolveMergeConflict(inflatedIncomingBufferRecord, recordIndex) :
+					if self.resolveMergeConflict(inflatedIncomingBufferRecord, appRecord) :
 						self.bufferDataChosen(record, {self.instanceID:self.counter})
 						 
 					# Merge conflict resolution chose the app Data
@@ -396,21 +397,21 @@ class Node:
 		# Record does not exist in the store
 		else :
 			# Record exists in the application
-			if recordIndex >= 0 :
+			if appRecord != None :
 
-				if self.appData[i][2] == 0 :
+				if not(self.appData[i].dirtyBit ):
 					raise ValueError('Data not present in Store but present in Application!')
 
 				else :
 					self.updateCounter()
 					# Does not choose app Data
-					if self.resolveMergeConflict(inflatedIncomingBufferRecord, recordIndex) :
+					if self.resolveMergeConflict(inflatedIncomingBufferRecord, appRecord) :
 						self.store[record.recordID] = deepcopy(record)
 						self.bufferDataChosen(record, {self.instanceID:self.counter})
 
 					# Chooses app Data
 					else :
-						self.appData[recordIndex] = self.changeTuple(self.appData[recordIndex],2,0)
+						appRecord.clearDirtyBit()
 						self.store[record.recordID] = deepcopy(record) 
 						self.appDataChosen(record, {self.instanceID:self.counter})
 						
@@ -545,7 +546,7 @@ class Node:
 		print "Counter value :" + str(self.counter)
 		print "appData :"
 		for i in range(0, len(self.appData)) :
-			print self.appData[i] 
+			print self.appData[i].printAppRecord()
 		print "syncDataStructure :"
 		for key, value in self.syncDataStructure.items() :
 			print key + ":"

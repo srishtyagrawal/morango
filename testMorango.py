@@ -1,6 +1,7 @@
 from simulateNode import Node
 from syncSession import SyncSession
 from storeRecord import StoreRecord 
+from appRecord import AppRecord
 import unittest
 import sys
 import random
@@ -36,8 +37,8 @@ class Test(unittest.TestCase) :
 
 		self.assertEqual(len(node.appData), 2)
 		# Check if their dirty bits have been cleared 
-		self.assertEqual(node.appData[0][2], 0)
-		self.assertEqual(node.appData[1][2], 0)
+		self.assertEqual(node.appData[0].dirtyBit, 0)
+		self.assertEqual(node.appData[1].dirtyBit, 0)
 
 		self.assertEqual(node.store["record1"].lastSavedByInstance, "A")
 		self.assertEqual(node.store["record1"].lastSavedByCounter, 1)
@@ -68,7 +69,7 @@ class Test(unittest.TestCase) :
 		node.serialize(("Facility1", "UserX"))
 		self.assertEqual(len(node.store), 3)
 		self.assertEqual(len(node.appData), 7)
-		self.assertEqual(node.appData[3][2], 0)
+		self.assertEqual(node.appData[3].dirtyBit, 0)
 		self.assertEqual(node.store["record4"].lastSavedByInstance, "A")
 		self.assertEqual(node.store["record4"].lastSavedByCounter, 3)
 		self.assertEqual(node.store["record4"].lastSavedByHistory, {"A":3})
@@ -78,16 +79,16 @@ class Test(unittest.TestCase) :
 		node.serialize(("Facility1", Node.ALL))
 		self.assertEqual(len(node.store), 5)
 		self.assertEqual(len(node.appData), 7)
-		self.assertEqual(node.appData[2][2], 0)
-		self.assertEqual(node.appData[4][2], 0)
+		self.assertEqual(node.appData[2].dirtyBit, 0)
+		self.assertEqual(node.appData[4].dirtyBit, 0)
 		self.assertEqual(node.store["record3"].lastSavedByHistory, {"A":4})
 		self.assertEqual(node.store["record5"].lastSavedByHistory, {"A":5})
 
 		node.serialize((Node.ALL, Node.ALL))
 		self.assertEqual(len(node.store), 7)
 		self.assertEqual(len(node.appData), 7)
-		self.assertEqual(node.appData[5][2], 0)
-		self.assertEqual(node.appData[6][2], 0)
+		self.assertEqual(node.appData[5].dirtyBit, 0)
+		self.assertEqual(node.appData[6].dirtyBit, 0)
 		self.assertEqual(node.store["record6"].lastSavedByHistory, {"A":6})
 		self.assertEqual(node.store["record7"].lastSavedByHistory, {"A":7})
 
@@ -277,19 +278,19 @@ class Test(unittest.TestCase) :
 		self.assertEqual(nodeList[1].store["record1"].partitionUser, Node.ALL)
 		self.assertEqual(nodeList[1].store["record1"].recordData, "A version 1")
 
-		recordIndex = nodeList[1].searchRecordInApp("record1")	
-		self.assertEqual(nodeList[1].appData[recordIndex][1], "A version 1")
-		self.assertEqual(nodeList[1].appData[recordIndex][2], 0)
-		self.assertEqual(nodeList[1].appData[recordIndex][3], Node.ALL)
-		self.assertEqual(nodeList[1].appData[recordIndex][4], Node.ALL)
+		appRecord = nodeList[1].searchRecordInApp("record1")	
+		self.assertEqual(appRecord.recordData, "A version 1")
+		self.assertEqual(appRecord.dirtyBit, 0)
+		self.assertEqual(appRecord.partitionFacility, Node.ALL)
+		self.assertEqual(appRecord.partitionUser, Node.ALL)
 
 		# Node B now modifies this data
 		nodeList[1].addAppData("record1","B version 1", Node.ALL, Node.ALL)
-		self.assertEqual(nodeList[1].appData[recordIndex][1], "B version 1")
-		self.assertEqual(nodeList[1].appData[recordIndex][2], 1)
+		self.assertEqual(appRecord.recordData, "B version 1")
+		self.assertEqual(appRecord.dirtyBit, 1)
 
 		nodeList[1].serialize((Node.ALL, Node.ALL))
-		self.assertEqual(nodeList[1].appData[recordIndex][2], 0)
+		self.assertEqual(appRecord.dirtyBit, 0)
 		self.assertEqual(nodeList[1].store["record1"].lastSavedByInstance, nodeList[1].instanceID)
 		self.assertEqual(nodeList[1].store["record1"].lastSavedByCounter, 1)
 		self.assertEqual(nodeList[1].store["record1"].lastSavedByHistory, {nodeList[0].instanceID:1,\
@@ -538,8 +539,8 @@ class Test(unittest.TestCase) :
 
 	def writeToFile (self, filename, start, end, numIterations, funcName) :
 		temp = []
-		listFuncNames = {"results/eventualFullMerge":self.eventualFullMerge, \
-			"results/eventualStarDiffBi":self.eventualStarDiffBi}
+		listFuncNames = {"eventualFullMerge":self.eventualFullMerge, \
+			"eventualStarDiffBi":self.eventualStarDiffBi}
 		f = open(filename, "a+")
 		func = listFuncNames[funcName]
 
@@ -554,7 +555,7 @@ class Test(unittest.TestCase) :
 
 
 	def test_multipleEventualFullMerge (self) :
-		self.writeToFile("results/mergeStats", 1, 50, 100, "eventualFullMerge")
+		self.writeToFile("results/mergeStats", 1, 5, 10, "eventualFullMerge")
 	
 
 	def createOffline (self, nodeList, percentage) :
