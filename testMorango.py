@@ -538,8 +538,8 @@ class Test(unittest.TestCase) :
 
 	def writeToFile (self, filename, start, end, numIterations, funcName) :
 		temp = []
-		listFuncNames = {"eventualFullMerge":self.eventualFullMerge, \
-			"eventualStarDiffBi":self.eventualStarDiffBi}
+		listFuncNames = {"results/eventualFullMerge":self.eventualFullMerge, \
+			"results/eventualStarDiffBi":self.eventualStarDiffBi}
 		f = open(filename, "a+")
 		func = listFuncNames[funcName]
 
@@ -554,7 +554,7 @@ class Test(unittest.TestCase) :
 
 
 	def test_multipleEventualFullMerge (self) :
-		self.writeToFile("mergeStats", 1, 50, 100, "eventualFullMerge")
+		self.writeToFile("results/mergeStats", 1, 50, 100, "eventualFullMerge")
 	
 
 	def createOffline (self, nodeList, percentage) :
@@ -619,7 +619,7 @@ class Test(unittest.TestCase) :
 
 
 	def test_eventualFullDiff (self) :
-		f = open("rand", "a+")
+		f = open("results/rand", "a+")
 		temp = []
 		for j in range(5) :
 			print j
@@ -656,7 +656,7 @@ class Test(unittest.TestCase) :
 
 
 	def test_multipleEventualStarDiff (self) :
-		self.writeToFile("rand2", 0, 4, 1, "eventualStarDiffBi")
+		self.writeToFile("results/rand2", 0, 4, 1, "eventualStarDiffBi")
 
 
 if __name__ == '__main__':
