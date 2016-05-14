@@ -283,18 +283,6 @@ class Node:
 		else :
 			return 1
 		
-	
-	def inflateRecord ( self, record) :
-		"""
-		Convert a storeRecord to an application record
-		Not adding the record to appData yet
-		"""
-		# Dirty bit is turned off by default
-		record = AppRecord(record.recordID, record.recordData, record.partitionFacility, \
-			record.partitionUser)
-		record.clearDirtyBit()
-		return record
-
 
 	def editRecordInStore (self, recordID, recordData, instanceID, counter, history) :
 		self.store[recordID].recordData = recordData
@@ -336,7 +324,7 @@ class Node:
 		Integrate record stored in Incoming Buffer to the store and application
 		"""
 
-		inflatedIncomingBufferRecord = self.inflateRecord(record)
+		inflatedIncomingBufferRecord = record.inflateRecord()
 		# Checking if record exists in the application
 		appRecord = self.searchRecordInApp(record.recordID)
 
@@ -417,7 +405,7 @@ class Node:
 						
 			# Record does not exist in the application
 			else :	
-				self.appData.append(self.inflateRecord(record))
+				self.appData.append(record.inflateRecord())
 				self.store[str(record.recordID)] = deepcopy(record)
 	
 

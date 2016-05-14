@@ -1,3 +1,5 @@
+from appRecord import AppRecord 
+
 class StoreRecord:
 
 	# Record Unique ID
@@ -77,6 +79,18 @@ class StoreRecord:
 		else :
 			self.lastSavedByHistory = {str(instanceID):count}
 			return True
+
+
+        def inflateRecord ( self) :
+                """
+                Convert a storeRecord to an application record
+                Not adding the record to appData yet
+                """
+                # Dirty bit is turned off by default
+                record = AppRecord(self.recordID, self.recordData, self.partitionFacility, \
+                        self.partitionUser)
+                record.clearDirtyBit()
+                return record
 
 
 	def printStoreRecord ( self ) :
