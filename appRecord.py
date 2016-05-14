@@ -1,3 +1,4 @@
+import hashlib
 class AppRecord:
 
 	# Record Unique ID
