@@ -93,6 +93,30 @@ class StoreRecord:
                 return record
 
 
+	def compareVersions (self, remoteRecord) :
+                """
+                Return 0 if I am smaller than remoteRecord
+                       1 if remoteRecord is smaller than me
+                       2 if there is a merge conflict i.e there is no ordering between me and remoteRecord
+                       3 if I am same as remoteRecord
+                """
+                if (self.lastSavedByInstance, self.lastSavedByCounter) == \
+			(remoteRecord.lastSavedByInstance, remoteRecord.lastSavedByCounter) :
+                        return 3
+
+                remoteGreaterThanMe = remoteRecord.lastSavedByHistory.has_key(self.lastSavedByInstance) and \
+			remoteRecord.lastSavedByHistory[self.lastSavedByInstance] >= self.lastSavedByCounter
+                iAmGreaterThanRemote = self.lastSavedByHistory.has_key(remoteRecord.lastSavedByInstance) and \
+			self.lastSavedByHistory[remoteRecord.lastSavedByInstance] >= remoteRecord.lastSavedByCounter
+
+                if remoteGreaterThanMe and not(iAmGreaterThanRemote) :
+                        return 0
+                elif not(remoteGreaterThanMe) and iAmGreaterThanRemote :
+                        return 1
+                else :
+                        return 2
+
+
 	def printStoreRecord ( self ) :
 		"""
 		Pretty-printing all the variable values residing in StoreRecord Object

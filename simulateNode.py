@@ -250,27 +250,6 @@ class Node:
 			del self.incomingBuffer[key]
 
 
-	def compareVersions (self, v1, v2, savedBy1, savedBy2) :
-		"""
-		Return 0 if v1 is smaller than v2
-		       1 if v2 is smaller than v1 
-		       2 if there is a merge conflict i.e there is no ordering between v1 and v2
-		       3 if v1 is same as v2
-		"""
-		if savedBy1 == savedBy2 :
-			return 3
-
-		v2GreaterThanv1 = v2.has_key(savedBy1[0]) and v2[savedBy1[0]] >= savedBy1[1]
-		v1GreaterThanv2 = v1.has_key(savedBy2[0]) and v1[savedBy2[0]] >= savedBy2[1]
-
-		if v2GreaterThanv1 and not(v1GreaterThanv2) :
-			return 0 
-		elif not(v2GreaterThanv1) and v1GreaterThanv2 :
-			return 1 
-		else :
-			return 2
-		
-
 	def resolveMergeConflict(self, inflatedRecord, appRecord) :
 		"""
 		Not using inflatedRecord and application data currently to resolve conflict
@@ -339,9 +318,7 @@ class Node:
 
 					storeRecordHistory = self.store[record.recordID].lastSavedByHistory
 					storeRecord = self.store[record.recordID]
-					versionComparison = self.compareVersions(storeRecordHistory, record.lastSavedByHistory,\
-						(storeRecord.lastSavedByInstance, storeRecord.lastSavedByCounter), \
-						(record.lastSavedByInstance, record.lastSavedByCounter))
+					versionComparison = storeRecord.compareVersions(record)
 
 					# Merge conflict between incoming buffer record and store record
 					if versionComparison == 2 :

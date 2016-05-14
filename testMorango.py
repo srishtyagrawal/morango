@@ -94,12 +94,38 @@ class Test(unittest.TestCase) :
 
 
 	def test_compareVersions(self) :
-        	n = Node("A")
-		self.assertEqual(n.compareVersions({"A":1},{"A":2}, ("A",1), ("A",2)), 0)
-		self.assertEqual(n.compareVersions({"A":1},{"A":1, "B":2}, ("A",1), ("B",2)), 0)
-		self.assertEqual(n.compareVersions({"A":4, "B":3},{"A":2}, ("A",4), ("A",2)), 1)
-		self.assertEqual(n.compareVersions({"A":2, "B":3},{"A":2}, ("B",3), ("A",2)), 1)
-		self.assertEqual(n.compareVersions({"A":2, "B":3},{"A":3}, ("B",3), ("A",3)), 2)
+        	storeRecord1 = StoreRecord("1","dummy","A", 1, {"A":1},"","")
+		storeRecord2 = StoreRecord("1","dummy","A", 2, {"A":2}, "","")
+		self.assertEqual(storeRecord1.compareVersions(storeRecord2), 0)
+
+		storeRecord2.lastSavedByHistory = {"A":1, "B":2}	
+		storeRecord2.lastSavedByInstance = "B"	
+		storeRecord2.lastSavedByCounter = 2	
+		self.assertEqual(storeRecord1.compareVersions(storeRecord2), 0)
+			
+		storeRecord1.lastSavedByHistory = {"A":4, "B":3}	
+		storeRecord1.lastSavedByInstance = "A"	
+		storeRecord1.lastSavedByCounter = 4	
+		storeRecord2.lastSavedByHistory = {"A":2}	
+		storeRecord2.lastSavedByInstance = "A"	
+		storeRecord2.lastSavedByCounter = 2	
+		self.assertEqual(storeRecord1.compareVersions(storeRecord2), 1)
+
+		storeRecord1.lastSavedByHistory = {"A":2, "B":3}	
+		storeRecord1.lastSavedByInstance = "B"	
+		storeRecord1.lastSavedByCounter = 3	
+		storeRecord2.lastSavedByHistory = {"A":2}	
+		storeRecord2.lastSavedByInstance = "A"	
+		storeRecord2.lastSavedByCounter = 2	
+		self.assertEqual(storeRecord1.compareVersions(storeRecord2), 1)
+
+		storeRecord1.lastSavedByHistory = {"A":2, "B":3}	
+		storeRecord1.lastSavedByInstance = "B"	
+		storeRecord1.lastSavedByCounter = 3	
+		storeRecord2.lastSavedByHistory = {"A":3}	
+		storeRecord2.lastSavedByInstance = "A"	
+		storeRecord2.lastSavedByCounter = 3	
+		self.assertEqual(storeRecord1.compareVersions(storeRecord2), 2)
 
 
 	def createNodes(self, size):
