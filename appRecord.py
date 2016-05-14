@@ -43,6 +43,19 @@ class AppRecord:
 		"""
 		self.recordData = data
 
+	def resolveMergeConflict(self, inflatedRecord) :
+                """
+                Not using inflatedRecord and application data currently to resolve conflict
+                Picking one of the values using hash values
+                """
+                hashedInflatedData = hashlib.md5(inflatedRecord.recordData).hexdigest()
+                hashedAppData = hashlib.md5(self.recordData).hexdigest()
+                if (hashedInflatedData > hashedAppData) :
+                        return 0
+                else :
+                        return 1
+
+
 
 	def printAppRecord ( self ) :
 		"""

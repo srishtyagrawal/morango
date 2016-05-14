@@ -250,19 +250,6 @@ class Node:
 			del self.incomingBuffer[key]
 
 
-	def resolveMergeConflict(self, inflatedRecord, appRecord) :
-		"""
-		Not using inflatedRecord and application data currently to resolve conflict
-		Picking one of the values using hash values
-		"""
-		hashedInflatedData = hashlib.md5(inflatedRecord.recordData).hexdigest()
-		hashedAppData = hashlib.md5(appRecord.recordData).hexdigest()
-		if (hashedInflatedData > hashedAppData) :
-			return 0
-		else :
-			return 1
-		
-
 	def editRecordInStore (self, recordID, recordData, instanceID, counter, history) :
 		self.store[recordID].recordData = recordData
 		self.store[recordID].lastSavedByInstance = instanceID 
@@ -324,7 +311,7 @@ class Node:
 					if versionComparison == 2 :
 
 						self.updateCounter()
-						if self.resolveMergeConflict(inflatedIncomingBufferRecord, appRecord):
+						if appRecord.resolveMergeConflict(inflatedIncomingBufferRecord):
 							# Merge conflict resolution did not choose the app data
 							self.bufferDataChosen(record, {self.instanceID :self.counter})
 
@@ -348,7 +335,7 @@ class Node:
 					self.updateCounter()
 					appRecord.clearDirtyBit()
 					# Merge conflict resolution did not choose the app Data
-					if self.resolveMergeConflict(inflatedIncomingBufferRecord, appRecord) :
+					if appRecord.resolveMergeConflict(inflatedIncomingBufferRecord) :
 						self.bufferDataChosen(record, {self.instanceID:self.counter})
 						 
 					# Merge conflict resolution chose the app Data
@@ -370,7 +357,7 @@ class Node:
 				else :
 					self.updateCounter()
 					# Does not choose app Data
-					if self.resolveMergeConflict(inflatedIncomingBufferRecord, appRecord) :
+					if appRecord.resolveMergeConflict(inflatedIncomingBufferRecord) :
 						self.store[record.recordID] = deepcopy(record)
 						self.bufferDataChosen(record, {self.instanceID:self.counter})
 
