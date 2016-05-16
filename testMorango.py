@@ -149,12 +149,12 @@ class Test(unittest.TestCase) :
 			nodeList[i].serialize((Node.ALL, Node.ALL))
 
 
-	def addAppRecordDiff (self, nodeList) :
+	def addAppRecordDiff (self, nodeList, seed="") :
 		"""
 		Adds an application record to each node in the nodelist such that they have different recordIDs
 		"""
 		for i in range(len(nodeList)) :
-			nodeList[i].addAppData("record" + nodeList[i].instanceID , "recordData"+ \
+			nodeList[i].addAppData("record" + nodeList[i].instanceID + seed , "recordData"+ \
 				nodeList[i].instanceID, Node.ALL, Node.ALL)
 			nodeList[i].serialize((Node.ALL, Node.ALL))
 
@@ -418,7 +418,7 @@ class Test(unittest.TestCase) :
 				for m in data :
 					if not(nodeList[i].store.has_key(m)) :
 						return True
-					
+
 		return False
 
 
@@ -542,6 +542,23 @@ class Test(unittest.TestCase) :
 		self.assertEqual(self.endConditionData(nodeList) , False)
 
 
+	def writeToFile (self, filename, start, end, numIterations, funcName) :
+		temp = []
+		listFuncNames = {"eventualFullMerge":self.eventualFullMerge, \
+			"eventualStarDiffBi":self.eventualStarDiffBi, "eventualRingDiffBi":self.eventualRingDiffBi}
+		f = open(filename, "a+")
+		func = listFuncNames[funcName]
+
+		for j in range(start,end) :
+			for i in range(numIterations) :
+				temp.append(func(j))
+			f.write(str(j))
+			f.write("\n")
+			f.write(str(temp))	
+			f.write("\n")
+			del temp[:]
+
+
 	def eventualFullMerge (self, networkSize) :
 		"""
 		-Nodes are fully connected
@@ -562,25 +579,8 @@ class Test(unittest.TestCase) :
 			total = total + 1			
 		return total
 
-
-	def writeToFile (self, filename, start, end, numIterations, funcName) :
-		temp = []
-		listFuncNames = {"eventualFullMerge":self.eventualFullMerge, \
-			"eventualStarDiffBi":self.eventualStarDiffBi}
-		f = open(filename, "a+")
-		func = listFuncNames[funcName]
-
-		for j in range(start,end) :
-			for i in range(numIterations) :
-				temp.append(func(j))
-			f.write(str(j))
-			f.write("\n")
-			f.write(str(temp))	
-			f.write("\n")
-			del temp[:]
-
-
-	def test_multipleEventualFullMerge (self) :
+	# Experiments are being run for the dataset with different records on each node
+	def multipleEventualFullMerge (self) :
 		self.writeToFile("results/mergeStats", 1, 5, 10, "eventualFullMerge")
 	
 
@@ -595,6 +595,11 @@ class Test(unittest.TestCase) :
 			offlineNode = random.randint(0, len(nodes)-1)
 			offline.add(nodes[offlineNode])
 			del nodes[offlineNode]
+		nodeListOffline = []
+		for j in offline :
+			nodeListOffline.append(nodeList[j])
+		for k in offline :
+			self.addAppRecordDiff(nodeListOffline, "offline")
 		return offline
 
 
@@ -645,16 +650,18 @@ class Test(unittest.TestCase) :
 		return total
 
 
+	# The one with offline nodes 
 	def test_eventualFullDiff (self) :
-		f = open("results/rand", "a+")
+		f = open("results/50fullOfflineWithData", "a+")
 		temp = []
-		for j in range(5) :
-			print j
-			f.write(str(j))
-			f.write("\n")
-			(start, end) = self.createRandomRange(1, 5)
-			for k in range(5) :
-				for i in range(10) :
+		for j in range(50, 51) :
+			(start, end) = self.createRandomRange(1, 50)
+			print "start " + str(start) + " end " + str(end)
+			for k in range(10) :
+				print "percentage " + str(k*10)
+				f.write(str(k))
+				f.write("\n")
+				for i in range(100) :
 					temp.append(self.eventualFullDiffBi(j, k*10, start, end))
 				f.write(str(temp))	
 				f.write("\n")
@@ -682,8 +689,34 @@ class Test(unittest.TestCase) :
 		return total
 
 
-	def test_multipleEventualStarDiff (self) :
-		self.writeToFile("results/rand2", 0, 4, 1, "eventualStarDiffBi")
+	# Data already collected for upto 100 nodes
+	def multipleEventualStarDiff (self) :
+		self.writeToFile("results/biStarDiff", 1000, 1001, 1, "eventualStarDiffBi")
+
+
+	def eventualRingDiffBi (self, ringSize) :
+		"""
+		-Nodes are arranged in a ring topology
+		-All the nodes have record with different IDs  
+		-End condition is all nodes having the same set of data(data from all devices)
+		-Returns the total times communication happened between a pair of nodes
+		before the end condition was reached.
+		"""
+		nodeList = self.createNodes(ringSize)
+		self.addAppRecordDiff(nodeList)
+		sessionInfo = self.sessionsRing(nodeList)
+
+		total = 0 
+		while self.endConditionData(nodeList) :
+			index = random.randint(0, len(sessionInfo)-1)
+			# Full DB replication 
+			self.fullDBReplication(nodeList[sessionInfo[index][0]], sessionInfo[index][2])
+			total = total + 1			
+		return total
+
+
+	def ringDiffBi (self) :
+		self.writeToFile("results/ringDiffBi", 70, 80, 100, "eventualRingDiffBi")
 
 
 if __name__ == '__main__':
