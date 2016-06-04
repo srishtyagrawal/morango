@@ -584,7 +584,7 @@ class Test(unittest.TestCase) :
 		self.writeToFile("results/mergeStats", 1, 5, 10, "eventualFullMerge")
 	
 
-	def createOffline (self, nodeList, percentage) :
+	def createOffline (self, nodeList, percentage, produceData=None) :
 		"""
 		Helper function that returns a set of offline nodes
 		"""
@@ -595,11 +595,12 @@ class Test(unittest.TestCase) :
 			offlineNode = random.randint(0, len(nodes)-1)
 			offline.add(nodes[offlineNode])
 			del nodes[offlineNode]
-		nodeListOffline = []
-		for j in offline :
-			nodeListOffline.append(nodeList[j])
-		for k in offline :
-			self.addAppRecordDiff(nodeListOffline, "offline")
+		if produceData :
+			nodeListOffline = []
+			for j in offline :
+				nodeListOffline.append(nodeList[j])
+			for k in offline :
+				self.addAppRecordDiff(nodeListOffline, "offline")
 		return offline
 
 
@@ -621,7 +622,7 @@ class Test(unittest.TestCase) :
 			return False
 
 
-	def eventualFullDiffBi (self, networkSize, percentage, start, end) :
+	def eventualFullDiffBi (self, networkSize, percentage, start, end, produceData=None) :
 		"""
 		-Given percentage of nodes go offline between start and end time.
 		-Nodes are fully connected
@@ -634,7 +635,7 @@ class Test(unittest.TestCase) :
 		self.addAppRecordDiff(nodeList)
 		sessionInfo = self.sessionsFull(nodeList)
 
-		offline = self.createOffline(nodeList, percentage)
+		offline = self.createOffline(nodeList, percentage, produceData)
 		total = 0
 		#print offline  
 		#print "start " + str(start) + " end " + str(end)
@@ -651,18 +652,119 @@ class Test(unittest.TestCase) :
 
 
 	# The one with offline nodes 
-	def test_eventualFullDiff (self) :
-		f = open("results/50fullOfflineWithData", "a+")
+	def eventualFullDiff (self) :
+		f = open("results/100OfflineNew", "a+")
 		temp = []
-		for j in range(50, 51) :
-			(start, end) = self.createRandomRange(1, 50)
+		for j in range(100, 101) :
+			(start, end) = self.createRandomRange(250, 400)
 			print "start " + str(start) + " end " + str(end)
 			for k in range(10) :
 				print "percentage " + str(k*10)
-				f.write(str(k))
+				f.write(str(k*10))
 				f.write("\n")
 				for i in range(100) :
 					temp.append(self.eventualFullDiffBi(j, k*10, start, end))
+				f.write(str(temp))	
+				f.write("\n")
+				del temp[:]
+				for i in range(100) :
+					temp.append(self.eventualFullDiffBi(j, k*10, start, end, 1))
+				f.write(str(temp))	
+				f.write("\n")
+				del temp[:]
+
+
+	def makeOfflineChannels (self, sessionInfo, percentage) :
+		offlineChannels = []
+		numOfflineChannels = int((len(sessionInfo) * percentage)/100)
+		for i in range(numOfflineChannels) :
+			index = random.randint(0, len(sessionInfo)-1)
+			offlineChannels.append((sessionInfo[index][0], sessionInfo[index][1]))
+			del sessionInfo[index]
+		return (sessionInfo, offlineChannels)
+
+
+	def fullDiffOfflineChannels (self, networkSize, percentage) :
+		"""
+		-Given percentage of channels offline
+		-Nodes are fully connected
+		-All the nodes have record with different IDs  
+		-End condition is all nodes having the same set of data(data from all devices)
+		-Returns the total times communication happened between a pair of nodes
+		before the end condition was reached.
+		"""
+		nodeList = self.createNodes(networkSize)
+		self.addAppRecordDiff(nodeList)
+		sessionInfo = self.sessionsFull(nodeList)
+		(sessionInfo, offlineChannels) = self.makeOfflineChannels(sessionInfo, percentage)
+		print offlineChannels
+		total = 0
+		while self.endConditionData(nodeList) :
+			index = random.randint(0, len(sessionInfo)-1)
+			client = sessionInfo[index][0]
+			server = sessionInfo[index][1]
+			self.fullDBReplication(nodeList[client], sessionInfo[index][2])
+			total = total + 1
+		return total
+
+
+
+	# The one with offline channels 
+	def eventualFullOfflineChannels (self) :
+		f = open("results/100OfflineChannels", "a+")
+		temp = []
+		for j in range(100, 101) :
+			for k in range(10, 15) :
+				print "percentage " + str(k*5)
+				f.write(str(k*5))
+				f.write("\n")
+				for i in range(100) :
+					temp.append(self.fullDiffOfflineChannels(j, k*5))
+				f.write(str(temp))	
+				f.write("\n")
+				del temp[:]
+
+
+	def fullIntroduceNew (self, networkSize, numNodes, time) :
+		"""
+		-Given number of nodes to be added to the network at time
+		-Nodes are fully connected
+		-All the nodes have record with different IDs  
+		-End condition is all nodes having the same set of data(data from all devices)
+		-Returns the total times communication happened between a pair of nodes
+		before the end condition was reached.
+		"""
+		nodeList = self.createNodes(networkSize)
+		self.addAppRecordDiff(nodeList)
+		sessionInfo = self.sessionsFull(nodeList)
+		total = 0
+		while self.endConditionData(nodeList) :
+			if total == time :
+				for i in range(networkSize, networkSize + numNodes):
+					node = Node(str(i))
+					nodeList.append(node)
+					node.addAppData("record"+str(i),"data" + str(i), Node.ALL, Node.ALL )
+                			node.serialize((Node.ALL, Node.ALL))
+					sessionInfo = self.sessionsFull(nodeList)
+			index = random.randint(0, len(sessionInfo)-1)
+			client = sessionInfo[index][0]
+			server = sessionInfo[index][1]
+			self.fullDBReplication(nodeList[client], sessionInfo[index][2])
+			total = total + 1
+		return total
+
+
+	def test_eventualFullOfflineChannels (self) :
+		f = open("results/100AddNew", "a+")
+		temp = []
+		for j in range(100, 101) :
+			for k in range(8) :
+				f.write(str(k*100))
+				print "time " + str(k*100)
+				f.write("\n")
+				for i in range(100) :
+					print "simulation " + str(i)
+					temp.append(self.fullIntroduceNew(j, 5, k*100))
 				f.write(str(temp))	
 				f.write("\n")
 				del temp[:]

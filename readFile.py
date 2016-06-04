@@ -23,14 +23,14 @@ def readFile (filename):
 			y.append(total)
 	return (x, y)
 
-(x, y) = readFile ("results/50fullOffline")
+(x, y) = readFile ("results/100AddNew")
 plt.plot(x, y, "ro")
 plt.show()
 
-(a, b) = readFile ("results/fullBiDiff")
-print "fullBiDiff"
-print a[50]
-print b[50]
+#(a, b) = readFile ("results/fullBiDiff")
+#print "fullBiDiff"
+#print a[50]
+#print b[50]
 """
 (x, y) = readFile ("results/fullBiDiff")
 (a, b) = readFile ("results/biStarDiff")
@@ -52,4 +52,3 @@ coefficients3 = numpy.polyfit(n, m, 2)
 polynomial3 = numpy.poly1d(coefficients3)
 print polynomial3
 """
-
